@@ -1,0 +1,31 @@
+{
+  "name": "eevee-connector-irc",
+  "version": "0.4.20",
+  "description": "eevee-connector-irc",
+  "keywords": [
+    "eevee"
+  ],
+  "homepage": "https://github.com/eeveebot/connector-irc#readme",
+  "bugs": {
+    "url": "https://github.com/eeveebot/connector-irc/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eeveebot/connector-irc.git"
+  },
+  "license": "CC-BY-SA-4.0",
+  "author": "Edwin Pers <pers.edwin@gmail.com>",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "test": "node_modules/.bin/eslint src/"
+  },
+  "devDependencies": {
+    "eslint": "^9.33.0",
+    "globals": "^16.3.0"
+  },
+  "dependencies": {
+    "irc-framework": "^4.14.0",
+    "winston": "^3.17.0"
+  }
+}

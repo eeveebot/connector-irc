@@ -6,4 +6,4 @@ COPY --chown=node:node ./src/ /eevee/
 
 USER node
 
-CMD ["/eevee/main.mjs"]
+CMD ["npm", "run", "start"]

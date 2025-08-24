@@ -18,7 +18,8 @@
   "type": "module",
   "main": "main.mjs",
   "scripts": {
-    "test": "node_modules/.bin/eslint src/"
+    "test": "node_modules/.bin/eslint src/",
+    "start": "node src/main.mjs"
   },
   "devDependencies": {
     "eslint": "^9.33.0",

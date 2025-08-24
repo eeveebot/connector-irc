@@ -20,15 +20,21 @@ console.log(eeveeLogo);
 
 log.info(`[core] eevee-irc-connector v${connectorVersion} starting up`);
 
+const ircClients = [];
+
 //
 // Do whatever teardown is necessary before calling common handler
 process.on('SIGINT', () => {
-  ircClient.quit(`eevee-irc-connector v${connectorVersion}`);
+  ircClients.forEach((ircClient) => {
+    ircClient.quit(`eevee-irc-connector v${connectorVersion}`);
+  });
   handleSIG('SIGINT');
 });
 
 process.on('SIGTERM', () => {
-  ircClient.quit(`eevee-irc-connector v${connectorVersion}`);
+  ircClients.forEach((ircClient) => {
+    ircClient.quit(`eevee-irc-connector v${connectorVersion}`);
+  });
   handleSIG('SIGTERM');
 });
 
@@ -36,60 +42,68 @@ process.on('SIGTERM', () => {
 // Setup IRC connection from config file
 
 // Get path to config file from env.CONNECTOR_IRC_CONFIG_FILE
-const configFilePath = process.env.CONNECTOR_IRC_CONFIG_FILE;
-if (!configFilePath) {
-  const msg = "[core] environment variable CONNECTOR_IRC_CONFIG_FILE is not set.";
+const connectionsConfigFilePath = process.env.IRC_CONNECTIONS_CONFIG_FILE;
+if (!connectionsConfigFilePath) {
+  const msg = "[core] environment variable IRC_CONNECTIONS_CONFIG_FILE is not set.";
   log.error(msg);
   throw new Error(msg);
 }
 
-var config = null;
+var connectionsConfig = null;
 
 // Read it in and parse it
 try {
-  const configFileContent = fs.readFileSync(path.resolve(configFilePath), 'utf8');
-  config = yaml.load(configFileContent);
+  const connectionsConfigFileContent = fs.readFileSync(path.resolve(connectionsConfigFilePath), 'utf8');
+  connectionsConfig = yaml.load(connectionsConfigFileContent);
 
-  log.info(`[core] config loaded from ${configFilePath}`);
+  log.info(`[core] config loaded from ${connectionsConfigFilePath}`);
 } catch (error) {
   const msg = `[core] error reading or parsing the config file: ${error}`;
   log.error(msg);
   throw new Error(msg);
 }
 
-// Stand up the connection
-log.info("[ircClient] setting up irc connection");
-const ircClient = new IRC.Client();
+// Stand up the connection for each config
+connectionsConfig.ircConnections.forEach((ircConnection) => {
+  log.info(`[ircClient] setting up irc connection for ${ircConnection.name}`);
 
-const ircConnectionOptions = {
-  auto_reconnect_max_retries: config.irc.server.autoReconnectMaxRetries || 10,
-  auto_reconnect_wait:        config.irc.server.autoReconnectWait || 5000,
-  auto_reconnect:             config.irc.server.autoReconnect || true,
-  auto_rejoin_max_retries:    config.irc.server.autoRejoiNMaxRetries || 5,
-  auto_rejoin_wait:           config.irc.server.autoRejoinWait || 5000,
-  auto_rejoin:                config.irc.server.autoRejoin || true,
-  gecos:                      config.irc.ident.gecos || 'eevee.bot',
-  host:                       config.irc.server.host || 'localhost',
-  nick:                       config.irc.ident.nick || 'eevee',
-  ping_interval:              config.irc.server.pingInterval || 30,
-  ping_timeout:               config.irc.server.pingTimeout || 120,
-  port:                       config.irc.server.port || '6667',
-  ssl:                        config.irc.server.ssl || false,
-  username:                   config.irc.ident.username || 'eevee',
-  version:                    config.irc.ident.version || connectorVersion,
-};
+  const ircClient = new IRC.Client();
 
-log.info(`[ircClient] client connecting to ${ircConnectionOptions.host}`);
-ircClient.connect(ircConnectionOptions);
+  ircClients.push(ircClient);
 
-ircClient.on('registered', () => {
-  log.info(`[ircClient] client connected to ${ircConnectionOptions.host}`);
-  config.irc.postConnect.join.forEach((join) => {
-    log.info(`[ircClient] joining channel: ${join.channel}`);
-    ircClient.join(join.channel, join.password);
+  const ircConnectionOptions = {
+    auto_reconnect_max_retries: ircConnection.irc.autoReconnectMaxRetries || 10,
+    auto_reconnect_wait:        ircConnection.irc.autoReconnectWait || 5000,
+    auto_reconnect:             ircConnection.irc.autoReconnect || true,
+    auto_rejoin_max_retries:    ircConnection.irc.autoRejoinMaxRetries || 5,
+    auto_rejoin_wait:           ircConnection.irc.autoRejoinWait || 5000,
+    auto_rejoin:                ircConnection.irc.autoRejoin || true,
+    gecos:                      ircConnection.irc.ident.gecos || 'eevee.bot',
+    host:                       ircConnection.irc.host || 'localhost',
+    nick:                       ircConnection.irc.ident.nick || 'eevee',
+    ping_interval:              ircConnection.irc.pingInterval || 30,
+    ping_timeout:               ircConnection.irc.pingTimeout || 120,
+    port:                       ircConnection.irc.port || '6667',
+    ssl:                        ircConnection.irc.ssl || false,
+    username:                   ircConnection.irc.ident.username || 'eevee',
+    version:                    ircConnection.irc.ident.version || connectorVersion,
+  };
+
+  log.info(`[ircClient] client connecting to ${ircConnectionOptions.host}`);
+  ircClient.connect(ircConnectionOptions);
+
+  ircClient.on('registered', () => {
+    log.info(`[ircClient] client connected to ${ircConnectionOptions.host}`);
+    // Sort the join actions based on the sequence key
+    const sortedJoins = ircConnection.irc.postConnect.join.sort((a, b) => a.sequence - b.sequence);
+
+    sortedJoins.forEach((join) => {
+      log.info(`[ircClient] joining channel: ${join.channel}`);
+      ircClient.join(join.channel, join.password);
+    });
   });
-});
 
-ircClient.on('message', (data) => {
-  log.info({message: `[ircClient] received: [${data.message}]`, raw: data});
+  ircClient.on('message', (data) => {
+    log.info({message: `[ircClient] received: [${data.message}]`, raw: data});
+  });
 });

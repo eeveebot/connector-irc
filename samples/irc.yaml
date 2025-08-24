@@ -1,0 +1,37 @@
+---
+
+ircConnections:
+- name: eeveebot
+  irc:
+    host: irc.eevee.bot
+    port: 6697
+    ssl: true
+    autoReconnect: true
+    autoReconnectWait: 5000
+    autoReconnectMaxRetries: 10
+    autoRejoin: true
+    autoRejoinWait: 5000
+    autoRejoinMaxRetries: 5
+    pingInterval: 30
+    pingTimeout: 120
+
+  ident:
+    nick: eevee
+    username: eevee
+    gecos: eevee.bot
+    version: "0.4.20"
+
+  postConnect:
+    join:
+      - sequence: 1
+        channel: '#eevee'
+        password: ''
+    # message:
+    #   - target: nickserv
+    #     msg: login mytoken
+    # mode:
+    #   - target: '__self'
+    #     mode: '-x'
+    # raw:
+    #   - sequence: 1
+    #     raw: 'raw_irc_string'

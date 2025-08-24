@@ -26,14 +26,14 @@ const ircClients = [];
 // Do whatever teardown is necessary before calling common handler
 process.on('SIGINT', () => {
   ircClients.forEach((ircClient) => {
-    ircClient.quit(`eevee-irc-connector v${connectorVersion}`);
+    ircClient.quit(ircClient.quitMsg);
   });
   handleSIG('SIGINT');
 });
 
 process.on('SIGTERM', () => {
   ircClients.forEach((ircClient) => {
-    ircClient.quit(`eevee-irc-connector v${connectorVersion}`);
+    ircClient.quit(ircClient.quitMsg);
   });
   handleSIG('SIGTERM');
 });
@@ -69,6 +69,8 @@ connectionsConfig.ircConnections.forEach((ircConnection) => {
 
   const ircClient = new IRC.Client();
 
+  ircClient.quitMsg = ircConnection.ident.quitMsg;
+
   ircClients.push(ircClient);
 
   const ircConnectionOptions = {
@@ -78,15 +80,15 @@ connectionsConfig.ircConnections.forEach((ircConnection) => {
     auto_rejoin_max_retries:    ircConnection.irc.autoRejoinMaxRetries || 5,
     auto_rejoin_wait:           ircConnection.irc.autoRejoinWait || 5000,
     auto_rejoin:                ircConnection.irc.autoRejoin || true,
-    gecos:                      ircConnection.irc.ident.gecos || 'eevee.bot',
+    gecos:                      ircConnection.ident.gecos || 'eevee.bot',
     host:                       ircConnection.irc.host || 'localhost',
-    nick:                       ircConnection.irc.ident.nick || 'eevee',
+    nick:                       ircConnection.ident.nick || 'eevee',
     ping_interval:              ircConnection.irc.pingInterval || 30,
     ping_timeout:               ircConnection.irc.pingTimeout || 120,
     port:                       ircConnection.irc.port || '6667',
     ssl:                        ircConnection.irc.ssl || false,
-    username:                   ircConnection.irc.ident.username || 'eevee',
-    version:                    ircConnection.irc.ident.version || connectorVersion,
+    username:                   ircConnection.ident.username || 'eevee',
+    version:                    ircConnection.ident.version || connectorVersion,
   };
 
   log.info(`[ircClient] client connecting to ${ircConnectionOptions.host}`);

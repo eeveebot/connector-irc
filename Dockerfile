@@ -13,4 +13,6 @@ WORKDIR /eevee
 RUN set -exu \
   && npm install --include=prod
 
+ENV NODE_ENV=production
+
 CMD ["node", "src/main.mjs"]

@@ -96,13 +96,16 @@ connectionsConfig.ircConnections.forEach((ircConnection) => {
 
   ircClient.on('registered', () => {
     log.info(`[ircClient] client connected to ${ircConnectionOptions.host}`);
-    // Sort the join actions based on the sequence key
-    const sortedJoins = ircConnection.irc.postConnect.join.sort((a, b) => a.sequence - b.sequence);
 
-    sortedJoins.forEach((join) => {
-      log.info(`[ircClient] joining channel: ${join.channel}`);
-      ircClient.join(join.channel, join.password);
-    });
+    if (ircConnection.irc.postConnect.join) {
+      // Sort the join actions based on the sequence key
+      const sortedJoins = ircConnection.irc.postConnect.join.sort((a, b) => a.sequence - b.sequence);
+
+      sortedJoins.forEach((join) => {
+        log.info(`[ircClient] joining channel: ${join.channel}`);
+        ircClient.join(join.channel, join.password);
+      });
+    }
   });
 
   ircClient.on('message', (data) => {

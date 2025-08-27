@@ -84,14 +84,14 @@ class IrcClientInstance extends EventEmitter {
     this.irc.join(channel.name, channel.key || "");
   }
 
-  connect(connectionOptions) {
-    log.info(`client connecting to ${connectionOptions.host}`, {producer: "ircClient"});
+  connect() {
+    log.info(`client connecting to ${this.connectionOptions.host}`, {producer: "ircClient"});
 
-    this.status.remoteHost = connectionOptions.host;
-    this.irc.connect(connectionOptions);
+    this.status.remoteHost = this.connectionOptions.host;
+    this.irc.connect(this.connectionOptions);
 
     this.irc.on("registered", () => {
-      log.info(`client connected to ${connectionOptions.host}`, {producer: "ircClient"});
+      log.info(`client connected to ${this.connectionOptions.host}`, {producer: "ircClient"});
 
       if (this.postConnect?.join) {
         // Sort the join actions based on the sequence key

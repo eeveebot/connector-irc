@@ -3,7 +3,7 @@
 import { log as log } from './log.mjs';
 
 export async function handleSIG(signal) {
-  log.info(`[handleSIG] Received ${signal}, cleaning up... (repeat to force)`);
+  log.info(`Received ${signal}, cleaning up... (repeat to force)`, {producer: 'handleSIG'});
   process.removeAllListeners('SIGTERM');
   process.removeAllListeners('SIGINT');
   process.on(signal, () => {

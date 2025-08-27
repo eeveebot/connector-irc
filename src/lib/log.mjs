@@ -43,7 +43,7 @@ if (process.env.NODE_ENV !== 'production') {
       winston.format.splat(),
       winston.format.colorize(),
       winston.format.printf((msg) => {
-        return `${msg.timestamp} [${msg.level}] ${msg.message}`;
+        return `${msg.timestamp} [${msg.level}] [${msg.producer}] ${msg.message}`;
       }),
     )
   }));

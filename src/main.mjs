@@ -97,7 +97,7 @@ connectionsConfig.ircConnections.forEach((ircConnection) => {
   ircClient.on('registered', () => {
     log.info(`[ircClient] client connected to ${ircConnectionOptions.host}`);
 
-    if (ircConnection.irc.postConnect.join) {
+    if (ircConnection.irc?.postConnect?.join) {
       // Sort the join actions based on the sequence key
       const sortedJoins = ircConnection.irc.postConnect.join.sort((a, b) => a.sequence - b.sequence);
 

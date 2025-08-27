@@ -99,7 +99,7 @@ class IrcClientInstance extends EventEmitter {
         log.info(`found ${sortedJoins.length} channels to join`, {producer: "ircClient"});
         sortedJoins.forEach((join) => {
           log.info(`joining channel: ${join.channel}`, {producer: "ircClient"});
-          this.irc.join({name: join.channel, key: join.key || ""});
+          this.irc.join(join.channel, join.key || "");
         });
       }
     });

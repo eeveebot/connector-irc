@@ -397,14 +397,14 @@ class IrcClientInstance extends EventEmitter {
 // Do whatever teardown is necessary before calling common handler
 process.on("SIGINT", () => {
   ircClients.forEach((ircClient) => {
-    ircClient.quit(ircClient.quitMsg);
+    ircClient.quit(`SIGINT received - ${ircClient.quitMsg}`);
   });
   handleSIG("SIGINT");
 });
 
 process.on("SIGTERM", () => {
   ircClients.forEach((ircClient) => {
-    ircClient.quit(ircClient.quitMsg);
+    ircClient.quit(`SIGTERM received - ${ircClient.quitMsg}`);
   });
   handleSIG("SIGTERM");
 });

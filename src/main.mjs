@@ -73,8 +73,20 @@ class IrcClientInstance extends EventEmitter {
     this.channels = [];
     this.irc = new IRC.Client();
 
+    this.irc.on("join", (data) => {
+      log.info(`joined channel ${data.channel}`, {
+        producer: "ircClient",
+        instanceUUID: this.instanceUUID,
+      });
+      this.updateStatus("channels", this.status.channels.concat(data.channel));
+    });
+
     this.irc.on("registered", (...args) => {
       this.emit("registered", ...args);
+    });
+
+    this.irc.on("connected", (...args) => {
+      this.emit("connected", ...args);
     });
 
     this.irc.on("reconnecting", (...args) => {
@@ -189,6 +201,10 @@ class IrcClientInstance extends EventEmitter {
 
     this.irc.on("privmsg", (...args) => {
       this.emit("privmsg", ...args);
+    });
+
+    this.irc.on("message", (...args) => {
+      this.emit("message", ...args);
     });
 
     this.irc.on("tagmsg", (...args) => {
@@ -321,27 +337,24 @@ class IrcClientInstance extends EventEmitter {
 
   join(channel) {
     this.channels.push(channel);
-    this.status.channels.push(channel.name);
     this.irc.join(channel.name, channel.key || "");
   }
 
   connect() {
     log.info(`client connecting to ${this.connectionOptions.host}`, {
       producer: "ircClient",
-    });
-
-
-    this.irc.on("motd", (data) => {
-      log.info(`server motd received`, {
-        producer: "ircClient",
-        motd: data.motd
-      });
+      instanceUUID: this.instanceUUID,
     });
 
     this.irc.on("connected", (data) => {
       log.info(`client connected to ${this.connectionOptions.host} as ${data.nick}`, {
         producer: "ircClient",
+        instanceUUID: this.instanceUUID,
       });
+
+      this.updateStatus("ircConnected", true);
+      this.updateStatus("remoteHost", this.connectionOptions.host);
+      this.updateStatus("currentNick", data.nick);
 
       if (this.postConnect?.join) {
         // Sort the join actions based on the sequence key
@@ -350,22 +363,27 @@ class IrcClientInstance extends EventEmitter {
         );
         log.info(`found ${sortedJoins.length} channels to join`, {
           producer: "ircClient",
+          instanceUUID: this.instanceUUID,
         });
         sortedJoins.forEach((join) => {
-          log.info(`joining channel: ${join.channel}`, {
+          log.info(`joining channel ${join.channel}`, {
             producer: "ircClient",
+            instanceUUID: this.instanceUUID,
           });
-          this.irc.join(join.channel, join.key || "");
+          this.join(join.channel, join.key || "");
         });
       }
     });
 
-    this.status.remoteHost = this.connectionOptions.host;
     this.irc.connect(this.connectionOptions);
   }
 
   quit() {
     this.irc.quit(this.ident.quitMsg);
+  }
+
+  updateStatus(field, value) {
+    this.status[field] = value;
   }
 }
 
@@ -417,9 +435,6 @@ try {
 
 // Stand up the connection for each config
 connectionsConfig.ircConnections.forEach((ircConnection) => {
-  log.info(`setting up irc connection for ${ircConnection.name}`, {
-    producer: "ircClient",
-  });
 
   const client = new IrcClientInstance({
     name: ircConnection.name,
@@ -446,6 +461,11 @@ connectionsConfig.ircConnections.forEach((ircConnection) => {
     },
   });
 
+  log.info(`setting up irc connection for ${ircConnection.name}`, {
+    producer: "ircClient",
+    instanceUUID: client.instanceUUID,
+  });
+
   ircClients.push(client);
 
   client.connect();
@@ -453,6 +473,7 @@ connectionsConfig.ircConnections.forEach((ircConnection) => {
   client.on("message", (data) => {
     log.info(`message received: [${data.message}]`, {
       producer: "ircClient",
+      instanceUUID: client.instanceUUID,
       raw: data,
     });
   });

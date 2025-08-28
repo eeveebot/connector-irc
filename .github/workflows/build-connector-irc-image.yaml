@@ -62,5 +62,3 @@ jobs:
             ./docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file }}
           targets: build
-          cache-from: type=gha
-          cache-to: type=gha,mode=max

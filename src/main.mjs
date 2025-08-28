@@ -32,14 +32,14 @@ const ircClients = [];
 // Do whatever teardown is necessary before calling common handler
 process.on("SIGINT", () => {
   ircClients.forEach((ircClient) => {
-    ircClient.quit(`SIGINT received - ${ircClient.quitMsg}`);
+    ircClient.quit(`SIGINT received - ${ircClient.ident.quitMsg}`);
   });
   handleSIG("SIGINT");
 });
 
 process.on("SIGTERM", () => {
   ircClients.forEach((ircClient) => {
-    ircClient.quit(`SIGTERM received - ${ircClient.quitMsg}`);
+    ircClient.quit(`SIGTERM received - ${ircClient.ident.quitMsg}`);
   });
   handleSIG("SIGTERM");
 });

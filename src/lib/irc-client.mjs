@@ -5,7 +5,7 @@ import * as crypto from "crypto";
 
 import { default as IRC } from "irc-framework";
 
-export default class IrcClientInstance extends EventEmitter {
+export class IrcClientInstance extends EventEmitter {
   name = "";
   instanceUUID = "";
   instanceIdent = "";

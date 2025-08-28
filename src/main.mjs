@@ -330,11 +330,16 @@ class IrcClientInstance extends EventEmitter {
       producer: "ircClient",
     });
 
-    this.status.remoteHost = this.connectionOptions.host;
-    this.irc.connect(this.connectionOptions);
 
-    this.irc.on("registered", () => {
-      log.info(`client connected to ${this.connectionOptions.host}`, {
+    this.irc.on("motd", (data) => {
+      log.info(`server motd received`, {
+        producer: "ircClient",
+        motd: data.motd
+      });
+    });
+
+    this.irc.on("connected", (data) => {
+      log.info(`client connected to ${this.connectionOptions.host} as ${data.nick}`, {
         producer: "ircClient",
       });
 
@@ -354,6 +359,9 @@ class IrcClientInstance extends EventEmitter {
         });
       }
     });
+
+    this.status.remoteHost = this.connectionOptions.host;
+    this.irc.connect(this.connectionOptions);
   }
 
   quit() {

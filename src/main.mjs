@@ -107,7 +107,7 @@ class IrcClientInstance extends EventEmitter {
             producer: "ircClient",
             instanceUUID: this.instanceUUID,
           });
-          this.join(join.channel, join.key || "");
+          this.join(join);
         });
       }
     });

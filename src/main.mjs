@@ -73,6 +73,7 @@ class IrcClientInstance extends EventEmitter {
     this.channels = [];
     this.irc = new IRC.Client();
 
+    // When we join a channel, update our list of channels
     this.irc.on("join", (data) => {
       log.info(`joined channel ${data.channel}`, {
         producer: "ircClient",
@@ -81,6 +82,37 @@ class IrcClientInstance extends EventEmitter {
       this.updateStatus("channels", this.status.channels.concat(data.channel));
     });
 
+    // When we connect to a server, run any post-connect actions
+    this.irc.on("connected", (data) => {
+      log.info(`client connected to ${this.connectionOptions.host} as ${data.nick}`, {
+        producer: "ircClient",
+        instanceUUID: this.instanceUUID,
+      });
+
+      this.updateStatus("ircConnected", true);
+      this.updateStatus("remoteHost", this.connectionOptions.host);
+      this.updateStatus("currentNick", data.nick);
+
+      if (this.postConnect?.join) {
+        // Sort the join actions based on the sequence key
+        const sortedJoins = this.postConnect.join.sort(
+          (a, b) => a.sequence - b.sequence
+        );
+        log.info(`found ${sortedJoins.length} channels to join`, {
+          producer: "ircClient",
+          instanceUUID: this.instanceUUID,
+        });
+        sortedJoins.forEach((join) => {
+          log.info(`joining channel ${join.channel}`, {
+            producer: "ircClient",
+            instanceUUID: this.instanceUUID,
+          });
+          this.join(join.channel, join.key || "");
+        });
+      }
+    });
+
+    // Passthrough all events
     this.irc.on("registered", (...args) => {
       this.emit("registered", ...args);
     });
@@ -335,51 +367,25 @@ class IrcClientInstance extends EventEmitter {
     });
   }
 
+  // join joins the bot to a channel
   join(channel) {
+    // Push the channel+key to the array for later use
     this.channels.push(channel);
     this.irc.join(channel.name, channel.key || "");
   }
 
+  // connect() connects the IrcClient to the configured server
+  //           it also handles postConnect.join actions
   connect() {
     log.info(`client connecting to ${this.connectionOptions.host}`, {
       producer: "ircClient",
       instanceUUID: this.instanceUUID,
     });
-
-    this.irc.on("connected", (data) => {
-      log.info(`client connected to ${this.connectionOptions.host} as ${data.nick}`, {
-        producer: "ircClient",
-        instanceUUID: this.instanceUUID,
-      });
-
-      this.updateStatus("ircConnected", true);
-      this.updateStatus("remoteHost", this.connectionOptions.host);
-      this.updateStatus("currentNick", data.nick);
-
-      if (this.postConnect?.join) {
-        // Sort the join actions based on the sequence key
-        const sortedJoins = this.postConnect.join.sort(
-          (a, b) => a.sequence - b.sequence
-        );
-        log.info(`found ${sortedJoins.length} channels to join`, {
-          producer: "ircClient",
-          instanceUUID: this.instanceUUID,
-        });
-        sortedJoins.forEach((join) => {
-          log.info(`joining channel ${join.channel}`, {
-            producer: "ircClient",
-            instanceUUID: this.instanceUUID,
-          });
-          this.join(join.channel, join.key || "");
-        });
-      }
-    });
-
     this.irc.connect(this.connectionOptions);
   }
 
-  quit() {
-    this.irc.quit(this.ident.quitMsg);
+  quit(msg) {
+    this.irc.quit(msg || this.ident.quitMsg);
   }
 
   updateStatus(field, value) {

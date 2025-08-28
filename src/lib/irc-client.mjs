@@ -5,6 +5,8 @@ import * as crypto from "crypto";
 
 import { default as IRC } from "irc-framework";
 
+import { log } from "./log.mjs";
+
 export class IrcClientInstance extends EventEmitter {
   name = "";
   instanceUUID = "";

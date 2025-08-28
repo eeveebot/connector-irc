@@ -70,23 +70,25 @@ export class IrcClientInstance extends EventEmitter {
       this.updateStatus("remoteHost", this.connectionOptions.host);
       this.updateStatus("currentNick", data.nick);
 
-      if (this.postConnect?.join) {
-        // Sort the join actions based on the sequence key
-        const sortedJoins = this.postConnect.join.sort(
-          (a, b) => a.sequence - b.sequence
-        );
-        log.info(`found ${sortedJoins.length} channels to join`, {
-          producer: "ircClient",
-          instanceUUID: this.instanceUUID,
-        });
-        sortedJoins.forEach((join) => {
-          log.info(`joining channel ${join.channel}`, {
+      setTimeout(() => {
+        if (this.postConnect?.join) {
+          // Sort the join actions based on the sequence key
+          const sortedJoins = this.postConnect.join.sort(
+            (a, b) => a.sequence - b.sequence
+          );
+          log.info(`found ${sortedJoins.length} channels to join`, {
             producer: "ircClient",
             instanceUUID: this.instanceUUID,
           });
-          this.join(join);
-        });
-      }
+          sortedJoins.forEach((chan) => {
+            log.info(`joining channel ${chan.channel}`, {
+              producer: "ircClient",
+              instanceUUID: this.instanceUUID,
+            });
+            this.join({channel: chan.channel, key: chan.key || ""});
+          });
+        }
+      }, 2500);
     });
 
     // Passthrough all events

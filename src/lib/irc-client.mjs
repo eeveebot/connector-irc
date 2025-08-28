@@ -85,7 +85,7 @@ export class IrcClientInstance extends EventEmitter {
               producer: "ircClient",
               instanceUUID: this.instanceUUID,
             });
-            this.join({channel: chan.channel, key: chan.key || ""});
+            this.join({name: chan.channel, key: chan.key || ""});
           });
         }
       }, 2500);

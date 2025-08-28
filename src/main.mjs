@@ -76,7 +76,6 @@ try {
 
 // Stand up the connection for each config
 connectionsConfig.ircConnections.forEach((ircConnection) => {
-
   const client = new IrcClientInstance({
     name: ircConnection.name,
     ident: ircConnection.ident,
@@ -112,9 +111,17 @@ connectionsConfig.ircConnections.forEach((ircConnection) => {
   client.connect();
 
   client.on("message", (data) => {
-    log.info(`message received: [${data.message}]`, {
+    log.info(`message received`, {
       producer: "ircClient",
       instanceUUID: client.instanceUUID,
+      from_server: data.from_server,
+      hostname: data.hostname,
+      ident: data.ident,
+      message: data.message,
+      nick: data.nick,
+      tags: data.tags || {},
+      target: data.target,
+      type: data.type,
       raw: data,
     });
   });

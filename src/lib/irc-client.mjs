@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 import { EventEmitter } from "events";
 import * as crypto from "crypto";
@@ -7,7 +7,7 @@ import { default as IRC } from "irc-framework";
 
 import { log } from "./log.mjs";
 
-export class IrcClientInstance extends EventEmitter {
+export class IrcClient extends EventEmitter {
   name = "";
   instanceUUID = "";
   instanceIdent = "";
@@ -45,7 +45,7 @@ export class IrcClientInstance extends EventEmitter {
     this.ident = config.ident;
     this.postConnect = config.postConnect;
     this.connectionOptions = config.connectionOptions;
-    this.instanceIdent = `${process.env.HOSTNAME}`;
+    this.instanceIdent = `${process.env.HOSTNAME}-${config.name}`;
     this.instanceUUID = crypto.randomUUID();
     this.channels = [];
     this.irc = new IRC.Client();
@@ -61,17 +61,19 @@ export class IrcClientInstance extends EventEmitter {
 
     // When we connect to a server, run any post-connect actions
     this.irc.on("connected", (data) => {
-      log.info(`client connected to ${this.connectionOptions.host} as ${data.nick}`, {
-        producer: "ircClient",
-        instanceUUID: this.instanceUUID,
-      });
+      log.info(
+        `client connected to ${this.connectionOptions.host} as ${data.nick}`,
+        {
+          producer: "ircClient",
+          instanceUUID: this.instanceUUID,
+        }
+      );
 
       this.updateStatus("ircConnected", true);
       this.updateStatus("remoteHost", this.connectionOptions.host);
       this.updateStatus("currentNick", data.nick);
-
-      setTimeout(() => {
-        if (this.postConnect?.join) {
+      if (this.postConnect?.join) {
+        setTimeout(() => {
           // Sort the join actions based on the sequence key
           const sortedJoins = this.postConnect.join.sort(
             (a, b) => a.sequence - b.sequence
@@ -85,10 +87,10 @@ export class IrcClientInstance extends EventEmitter {
               producer: "ircClient",
               instanceUUID: this.instanceUUID,
             });
-            this.join({name: chan.channel, key: chan.key || ""});
+            this.join({ name: chan.channel, key: chan.key || "" });
           });
-        }
-      }, 2500);
+        }, 2500);
+      }
     });
 
     // Passthrough all events

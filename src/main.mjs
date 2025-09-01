@@ -10,7 +10,7 @@ import * as yaml from "js-yaml";
 // 1st party
 import { log, eeveeLogo } from "./lib/log.mjs";
 import { handleSIG } from "./lib/signal-handlers.mjs";
-import { IrcClientInstance } from "./lib/irc-client.mjs";
+import { IrcClient } from "./lib/irc-client.mjs";
 
 // Every module has a uuid
 const moduleUUID = "a3e978d9-33af-4d5c-b750-8b3c82e9ee17";
@@ -75,35 +75,34 @@ try {
 }
 
 // Stand up the connection for each config
-connectionsConfig.ircConnections.forEach((ircConnection) => {
-  const client = new IrcClientInstance({
-    name: ircConnection.name,
-    ident: ircConnection.ident,
-    connection: ircConnection.irc,
-    postConnect: ircConnection.postConnect,
-    connectionOptions: {
-      auto_reconnect_max_retries:
-        ircConnection.irc.autoReconnectMaxRetries || 10,
-      auto_reconnect_wait: ircConnection.irc.autoReconnectWait || 5000,
-      auto_reconnect: ircConnection.irc.autoReconnect || true,
-      auto_rejoin_max_retries: ircConnection.irc.autoRejoinMaxRetries || 5,
-      auto_rejoin_wait: ircConnection.irc.autoRejoinWait || 5000,
-      auto_rejoin: ircConnection.irc.autoRejoin || true,
-      gecos: ircConnection.ident.gecos || "eevee.bot",
-      host: ircConnection.irc.host || "localhost",
-      nick: ircConnection.ident.nick || "eevee",
-      ping_interval: ircConnection.irc.pingInterval || 30,
-      ping_timeout: ircConnection.irc.pingTimeout || 120,
-      port: ircConnection.irc.port || "6667",
-      ssl: ircConnection.irc.ssl || false,
-      username: ircConnection.ident.username || "eevee",
-      version: ircConnection.ident.version || connectorVersion,
-    },
+connectionsConfig.ircConnections.forEach((conn) => {
+  log.info(`setting up irc connection for ${conn.name}`, {
+    producer: "ircClient",
   });
 
-  log.info(`setting up irc connection for ${ircConnection.name}`, {
-    producer: "ircClient",
-    instanceUUID: client.instanceUUID,
+  const client = new IrcClient({
+    name: conn.name,
+    ident: conn.ident,
+    connection: conn.irc,
+    postConnect: conn.postConnect,
+    connectionOptions: {
+      auto_reconnect_max_retries:
+        conn.irc.autoReconnectMaxRetries || 10,
+      auto_reconnect_wait: conn.irc.autoReconnectWait || 5000,
+      auto_reconnect: conn.irc.autoReconnect || true,
+      auto_rejoin_max_retries: conn.irc.autoRejoinMaxRetries || 5,
+      auto_rejoin_wait: conn.irc.autoRejoinWait || 5000,
+      auto_rejoin: conn.irc.autoRejoin || true,
+      gecos: conn.ident.gecos || "eevee.bot",
+      host: conn.irc.host || "localhost",
+      nick: conn.ident.nick || "eevee",
+      ping_interval: conn.irc.pingInterval || 30,
+      ping_timeout: conn.irc.pingTimeout || 120,
+      port: conn.irc.port || "6667",
+      ssl: conn.irc.ssl || false,
+      username: conn.ident.username || "eevee",
+      version: conn.ident.version || connectorVersion,
+    },
   });
 
   ircClients.push(client);

@@ -11,6 +11,7 @@ import * as yaml from "js-yaml";
 import { log, eeveeLogo } from "./lib/log.mjs";
 import { handleSIG } from "./lib/signal-handlers.mjs";
 import { IrcClient } from "./lib/irc-client.mjs";
+import { NatsClient } from "./lib/nats-client.mjs";
 
 // Every module has a uuid
 const moduleUUID = "a3e978d9-33af-4d5c-b750-8b3c82e9ee17";
@@ -27,12 +28,16 @@ log.info(`eevee-irc-connector v${connectorVersion} starting up`, {
 });
 
 const ircClients = [];
+const natsClients = [];
 
 //
 // Do whatever teardown is necessary before calling common handler
 process.on("SIGINT", () => {
   ircClients.forEach((ircClient) => {
     ircClient.quit(`SIGINT received - ${ircClient.ident.quitMsg}`);
+  });
+  natsClients.forEach((natsClient) => {
+    natsClient.drain();
   });
   handleSIG("SIGINT");
 });
@@ -41,17 +46,47 @@ process.on("SIGTERM", () => {
   ircClients.forEach((ircClient) => {
     ircClient.quit(`SIGTERM received - ${ircClient.ident.quitMsg}`);
   });
+  natsClients.forEach((natsClient) => {
+    natsClient.drain();
+  });
   handleSIG("SIGTERM");
 });
 
 //
-// Setup IRC connection from config file
+// Setup NATS connection
+
+// Get host and token
+const natsHost = process.env.NATS_HOST || false;
+if (!natsHost) {
+  const msg = "environment variable NATS_HOST is not set.";
+  log.error(msg, { producer: "natsClient" });
+  throw new Error(msg);
+}
+
+const natsToken = process.env.NATS_TOKEN || false;
+if (!natsToken) {
+  const msg = "environment variable NATS_TOKEN is not set.";
+  log.error(msg, { producer: "natsClient" });
+  throw new Error(msg);
+}
+
+const nats = new NatsClient({
+  servers: natsHost,
+  token: natsToken,
+  port: 4222,
+});
+natsClients.push(nats);
+nats.connect();
+
+//
+// Setup IRC connections from config file
 
 // Get path to config file from env.CONNECTOR_IRC_CONFIG_FILE
-const connectionsConfigFilePath = process.env.IRC_CONNECTIONS_CONFIG_FILE;
+const connectionsConfigFilePath =
+  process.env.IRC_CONNECTIONS_CONFIG_FILE || false;
 if (!connectionsConfigFilePath) {
   const msg = "environment variable IRC_CONNECTIONS_CONFIG_FILE is not set.";
-  log.error(msg, { producer: "core" });
+  log.error(msg, { producer: "ircClient" });
   throw new Error(msg);
 }
 
@@ -66,11 +101,11 @@ try {
   connectionsConfig = yaml.load(connectionsConfigFileContent);
 
   log.info(`config loaded from ${connectionsConfigFilePath}`, {
-    producer: "core",
+    producer: "ircClient",
   });
 } catch (error) {
   const msg = `error reading or parsing the config file: ${error}`;
-  log.error(msg, { producer: "core" });
+  log.error(msg, { producer: "ircClient" });
   throw new Error(msg);
 }
 
@@ -86,8 +121,7 @@ connectionsConfig.ircConnections.forEach((conn) => {
     connection: conn.irc,
     postConnect: conn.postConnect,
     connectionOptions: {
-      auto_reconnect_max_retries:
-        conn.irc.autoReconnectMaxRetries || 10,
+      auto_reconnect_max_retries: conn.irc.autoReconnectMaxRetries || 10,
       auto_reconnect_wait: conn.irc.autoReconnectWait || 5000,
       auto_reconnect: conn.irc.autoReconnect || true,
       auto_rejoin_max_retries: conn.irc.autoRejoinMaxRetries || 5,
@@ -110,6 +144,21 @@ connectionsConfig.ircConnections.forEach((conn) => {
   client.connect();
 
   client.on("message", (data) => {
+    nats.publish(
+      `chat.message.incoming.irc.${client.name}.${data.target}.${data.ident}`,
+      JSON.stringify({
+        channel: data.target,
+        instance: client.ident.nick,
+        network: client.name,
+        platform: "irc",
+        raw_event: data,
+        srcUUID: moduleUUID,
+        text: data.message,
+        trace: crypto.randomUUID(),
+        type: "chat.message.incoming",
+        user: data.nick,
+      })
+    );
     log.info(`message received`, {
       producer: "ircClient",
       instanceUUID: client.instanceUUID,

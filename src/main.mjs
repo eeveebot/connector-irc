@@ -73,10 +73,9 @@ if (!natsToken) {
 const nats = new NatsClient({
   servers: natsHost,
   token: natsToken,
-  port: 4222,
 });
 natsClients.push(nats);
-nats.connect();
+await nats.connect();
 
 //
 // Setup IRC connections from config file

@@ -1,7 +1,7 @@
 ---
 
 ircConnections:
-- name: eeveebot
+- name: localhost
   irc:
     host: localhost
     port: 6667
@@ -15,23 +15,17 @@ ircConnections:
     pingInterval: 30
     pingTimeout: 120
 
+  # Identifying information for the bot
   ident:
-    nick: eevee
-    username: eevee
+    nick: eevee-dev
+    username: eevee-dev
     gecos: eevee.bot
     version: "0.4.20"
+    quitMsg: "eevee 0.4.20"
 
+  # Actions to take after connecting
   postConnect:
     join:
       - sequence: 1
         channel: '#eevee'
-        password: ''
-    # message:
-    #   - target: nickserv
-    #     msg: login mytoken
-    # mode:
-    #   - target: '__self'
-    #     mode: '-x'
-    # raw:
-    #   - sequence: 1
-    #     raw: 'raw_irc_string'
+        key: ''

@@ -71,8 +71,8 @@ if (!natsToken) {
 }
 
 const nats = new NatsClient({
-  servers: natsHost,
-  token: natsToken,
+  natsHost: natsHost,
+  natsToken: natsToken,
 });
 natsClients.push(nats);
 await nats.connect();

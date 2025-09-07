@@ -37,6 +37,15 @@ export class NatsClient extends EventEmitter {
       });
     } catch (err) {
       log.error(err.message, { producer: "natsClient" });
+      if (err.message === "CONNECTION_REFUSED") {
+        log.error("E_CONNECTION_REFUSED from NATS, will retry", {
+          producer: "natsClient",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+        await this.connect();
+      } else {
+        throw err;
+      }
     }
   }
 
@@ -46,7 +55,10 @@ export class NatsClient extends EventEmitter {
       this.subjects.push(sub);
       (async () => {
         for await (const message of sub) {
-          log.info(`[${message.subject}][${sub.getProcessed()}]: ${message.string()}`, { producer: "natsClient" });
+          log.info(
+            `[${message.subject}][${sub.getProcessed()}]: ${message.string()}`,
+            { producer: "natsClient" }
+          );
           if (typeof callback == "function") {
             callback(subject, message);
           }
@@ -54,7 +66,9 @@ export class NatsClient extends EventEmitter {
         log.info("subscription closed", { producer: "natsClient" });
       })();
     } else {
-      log.info("nats.subscribe() called before initialized", { producer: "natsClient" });
+      log.info("nats.subscribe() called before initialized", {
+        producer: "natsClient",
+      });
     }
   }
 
@@ -62,7 +76,9 @@ export class NatsClient extends EventEmitter {
     if (this.nats) {
       this.nats.publish(subject, message);
     } else {
-      log.info("nats.publish() called before initialized", { producer: "natsClient" });
+      log.info("nats.publish() called before initialized", {
+        producer: "natsClient",
+      });
     }
   }
 

@@ -34,7 +34,6 @@ export class NatsClient extends EventEmitter {
       this.nats = await Nats.connect({
         servers: this.natsHost,
         token: this.natsToken,
-        port: 4222,
       });
       log.info(`connected to NATS at ${this.nats.getServer()}`, {
         producer: "natsClient",

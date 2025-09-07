@@ -14,8 +14,6 @@ export class NatsClient extends EventEmitter {
 
   subjects = [];
 
-  nats = null;
-
   natsHost = null;
   natsToken = null;
 
@@ -24,7 +22,6 @@ export class NatsClient extends EventEmitter {
   constructor(config) {
     super();
     this.instanceUUID = crypto.randomUUID();
-    this.subjects = config.subjects || [];
     this.natsHost = config.natsHost;
     this.natsToken = config.natsToken;
   }
@@ -44,21 +41,29 @@ export class NatsClient extends EventEmitter {
   }
 
   async subscribe(subject, callback) {
-    const sub = this.nats.subscribe(subject);
-    this.subjects.push(sub);
-    (async () => {
-      for await (const message of sub) {
-        log.info(`[${message.subject}][${sub.getProcessed()}]: ${message.string()}`, { producer: "natsClient" });
-        if (typeof callback == "function") {
-          callback(subject, message);
+    if (this.nats) {
+      const sub = this.nats.subscribe(subject);
+      this.subjects.push(sub);
+      (async () => {
+        for await (const message of sub) {
+          log.info(`[${message.subject}][${sub.getProcessed()}]: ${message.string()}`, { producer: "natsClient" });
+          if (typeof callback == "function") {
+            callback(subject, message);
+          }
         }
-      }
-      log.info("subscription closed", { producer: "natsClient" });
-    })();
+        log.info("subscription closed", { producer: "natsClient" });
+      })();
+    } else {
+      log.info("nats.subscribe() called before initialized", { producer: "natsClient" });
+    }
   }
 
   async publish(subject, message) {
-    this.nats.publish(subject, message);
+    if (this.nats) {
+      this.nats.publish(subject, message);
+    } else {
+      log.info("nats.publish() called before initialized", { producer: "natsClient" });
+    }
   }
 
   async drain() {

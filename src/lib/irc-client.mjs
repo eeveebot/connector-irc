@@ -50,25 +50,15 @@ export class IrcClient extends EventEmitter {
     this.channels = [];
     this.irc = new IRC.Client();
 
-    // When we join a channel, update our list of channels
-    this.irc.on("join", (data) => {
-      log.info(`joined channel ${data.channel}`, {
-        producer: "ircClient",
-        instanceUUID: this.instanceUUID,
-      });
-      this.updateStatus("channels", this.status.channels.concat(data.channel));
-    });
-
-    // When we connect to a server, run any post-connect actions
     this.irc.on("connected", (data) => {
       log.info(
         `client connected to ${this.connectionOptions.host} as ${data.nick}`,
         {
           producer: "ircClient",
           instanceUUID: this.instanceUUID,
+          raw_event: data,
         }
       );
-
       this.updateStatus("ircConnected", true);
       this.updateStatus("remoteHost", this.connectionOptions.host);
       this.updateStatus("currentNick", data.nick);
@@ -82,15 +72,21 @@ export class IrcClient extends EventEmitter {
             producer: "ircClient",
             instanceUUID: this.instanceUUID,
           });
-          sortedJoins.forEach((chan) => {
-            log.info(`joining channel ${chan.channel}`, {
-              producer: "ircClient",
-              instanceUUID: this.instanceUUID,
-            });
-            this.join({ name: chan.channel, key: chan.key || "" });
+          sortedJoins.forEach((channel) => {
+            this.join({ name: channel.channel, key: channel.key || "" });
           });
         }, 2500);
       }
+    });
+
+    // When we join a channel, update our list of channels
+    this.irc.on("join", (data) => {
+      log.info(`joined channel ${data.channel}`, {
+        producer: "ircClient",
+        instanceUUID: this.instanceUUID,
+        raw_event: data,
+      });
+      this.updateStatus("channels", this.status.channels.concat(data.channel));
     });
 
     // Passthrough all events
@@ -350,13 +346,18 @@ export class IrcClient extends EventEmitter {
 
   // join joins the bot to a channel
   join(channel) {
+    log.info(`joining channel ${channel.channel}`, {
+      producer: "ircClient",
+      instanceUUID: this.instanceUUID,
+    });
+    const obj = this.irc.channel(channel.name, channel.key || "");
     // Push the channel+key to the array for later use
-    this.channels.push(channel);
-    this.irc.join(channel.name, channel.key || "");
+    this.channels.push(obj);
+    obj.join();
+    return obj;
   }
 
   // connect() connects the IrcClient to the configured server
-  //           it also handles postConnect.join actions
   connect() {
     log.info(`client connecting to ${this.connectionOptions.host}`, {
       producer: "ircClient",
@@ -371,5 +372,9 @@ export class IrcClient extends EventEmitter {
 
   updateStatus(field, value) {
     this.status[field] = value;
+  }
+
+  say(target, message) {
+    this.irc.say(target, message);
   }
 }

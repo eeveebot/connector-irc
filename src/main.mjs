@@ -8,10 +8,8 @@ import * as path from "path";
 import * as yaml from "js-yaml";
 
 // 1st party
-import { log, eeveeLogo } from "./lib/log.mjs";
-import { handleSIG } from "./lib/signal-handlers.mjs";
 import { IrcClient } from "./lib/irc-client.mjs";
-import { NatsClient } from "./lib/nats-client.mjs";
+import { NatsClient, handleSIG, log, eeveeLogo } from "@eeveebot/libeevee";
 
 // Every module has a uuid
 const moduleUUID = "a3e978d9-33af-4d5c-b750-8b3c82e9ee17";
@@ -29,6 +27,7 @@ log.info(`eevee-irc-connector v${connectorVersion} starting up`, {
 
 const ircClients = [];
 const natsClients = [];
+const natsSubscriptions = [];
 
 //
 // Do whatever teardown is necessary before calling common handler
@@ -77,6 +76,14 @@ const nats = new NatsClient({
 natsClients.push(nats);
 await nats.connect();
 
+const sub = nats.subscribe(
+  "control.connectors.irc.core.>",
+  (subject, message) => {
+    log.info(subject, message);
+  }
+);
+natsSubscriptions.push(sub);
+
 //
 // Setup IRC connections from config file
 
@@ -116,6 +123,7 @@ connectionsConfig.ircConnections.forEach((conn) => {
 
   const client = new IrcClient({
     name: conn.name,
+    nats: nats,
     ident: conn.ident,
     connection: conn.irc,
     postConnect: conn.postConnect,
@@ -142,11 +150,28 @@ connectionsConfig.ircConnections.forEach((conn) => {
 
   client.connect();
 
+  // When we connect to a server, run any post-connect actions
+  client.on("connected", (data) => {
+    // Do connected actions
+  });
+
+  client.on("join", (data) => {
+    const sub = nats.subscribe(
+      `chat.message.outgoing.irc.${this.name}.${data.channel}`,
+      (subject, message) => {
+        const text = message.string();
+        log.info("Outgoing message", { subject: subject, text: text });
+        client.say(data.channel, text);
+      }
+    );
+    natsSubscriptions.push(sub);
+  });
+
   client.on("message", (data) => {
     nats.publish(
       `chat.message.incoming.irc.${client.name}.${data.target}.${data.ident}`,
       JSON.stringify({
-        subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.ident}`,
+        subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}`,
         moduleUUID: moduleUUID,
         type: "chat.message.incoming",
         trace: crypto.randomUUID(),
@@ -155,21 +180,23 @@ connectionsConfig.ircConnections.forEach((conn) => {
         instance: client.ident.nick,
         channel: data.target,
         user: data.nick,
+        userHost: data.userHost,
         text: data.message,
         raw_event: data,
       })
     );
     log.info(`message received`, {
       producer: "ircClient",
-      subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.ident}`,
+      subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}`,
       moduleUUID: moduleUUID,
       type: "chat.message.incoming",
       trace: crypto.randomUUID(),
       platform: "irc",
-      network: client.name,
-      instance: client.ident.nick,
+      instance: client.name,
+      network: client.status.host,
       channel: data.target,
       user: data.nick,
+      userHost: data.userHost,
       text: data.message,
       raw_event: data,
     });

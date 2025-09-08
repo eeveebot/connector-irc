@@ -56,6 +56,8 @@ jobs:
 
       - name: Build and Push
         uses: docker/bake-action@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           push: true
           files: |

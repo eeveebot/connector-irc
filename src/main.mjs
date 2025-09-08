@@ -157,7 +157,7 @@ connectionsConfig.ircConnections.forEach((conn) => {
 
   client.on("join", (data) => {
     const sub = nats.subscribe(
-      `chat.message.outgoing.irc.${this.name}.${data.channel}`,
+      `chat.message.outgoing.irc.${client.name}.${data.channel}`,
       (subject, message) => {
         const text = message.string();
         log.info("Outgoing message", { subject: subject, text: text });

@@ -171,7 +171,7 @@ connectionsConfig.ircConnections.forEach((conn) => {
     nats.publish(
       `chat.message.incoming.irc.${client.name}.${data.target}.${data.ident}`,
       JSON.stringify({
-        subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}`,
+        subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}@${data.hostname}`,
         moduleUUID: moduleUUID,
         type: "chat.message.incoming",
         trace: crypto.randomUUID(),
@@ -180,14 +180,14 @@ connectionsConfig.ircConnections.forEach((conn) => {
         instance: client.ident.nick,
         channel: data.target,
         user: data.nick,
-        userHost: data.userHost,
+        userHost: data.hostname,
         text: data.message,
         raw_event: data,
       })
     );
     log.info(`message received`, {
       producer: "ircClient",
-      subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}`,
+      subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}@${data.hostname}`,
       moduleUUID: moduleUUID,
       type: "chat.message.incoming",
       trace: crypto.randomUUID(),
@@ -196,7 +196,7 @@ connectionsConfig.ircConnections.forEach((conn) => {
       network: client.status.host,
       channel: data.target,
       user: data.nick,
-      userHost: data.userHost,
+      userHost: data.hostname,
       text: data.message,
       raw_event: data,
     });

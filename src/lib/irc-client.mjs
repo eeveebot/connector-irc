@@ -346,7 +346,7 @@ export class IrcClient extends EventEmitter {
 
   // join joins the bot to a channel
   join(channel) {
-    log.info(`joining channel ${channel.channel}`, {
+    log.info(`joining channel ${channel.name}`, {
       producer: "ircClient",
       instanceUUID: this.instanceUUID,
     });

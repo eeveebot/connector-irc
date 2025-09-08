@@ -122,8 +122,7 @@ connectionsConfig.ircConnections.forEach((conn) => {
   });
 
   const client = new IrcClient({
-    name: conn.name,
-    nats: nats,
+    name: conn.name.replace('.', '-'),
     ident: conn.ident,
     connection: conn.irc,
     postConnect: conn.postConnect,

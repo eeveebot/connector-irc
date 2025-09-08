@@ -5,7 +5,7 @@ import * as crypto from "crypto";
 
 import { default as IRC } from "irc-framework";
 
-import { log } from "./log.mjs";
+import { log } from "@eeveebot/libeevee";
 
 export class IrcClient extends EventEmitter {
   name = "";

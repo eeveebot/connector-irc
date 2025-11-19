@@ -56,7 +56,7 @@ export class IrcClient extends EventEmitter {
         {
           producer: "ircClient",
           instanceUUID: this.instanceUUID,
-          raw_event: data,
+          rawEvent: data,
         }
       );
       this.updateStatus("ircConnected", true);
@@ -84,7 +84,7 @@ export class IrcClient extends EventEmitter {
       log.info(`joined channel ${data.channel}`, {
         producer: "ircClient",
         instanceUUID: this.instanceUUID,
-        raw_event: data,
+        rawEvent: data,
       });
       this.updateStatus("channels", this.status.channels.concat(data.channel));
     });

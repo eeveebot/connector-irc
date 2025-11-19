@@ -167,24 +167,7 @@ connectionsConfig.ircConnections.forEach((conn) => {
   });
 
   client.on("message", (data) => {
-    nats.publish(
-      `chat.message.incoming.irc.${client.name}.${data.target}.${data.ident}`,
-      JSON.stringify({
-        subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}@${data.hostname}`,
-        moduleUUID: moduleUUID,
-        type: "chat.message.incoming",
-        trace: crypto.randomUUID(),
-        platform: "irc",
-        network: client.name,
-        instance: client.ident.nick,
-        channel: data.target,
-        user: data.nick,
-        userHost: data.hostname,
-        text: data.message,
-        raw_event: data,
-      })
-    );
-    log.info(`message received`, {
+    const message = {
       producer: "ircClient",
       subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}@${data.hostname}`,
       moduleUUID: moduleUUID,
@@ -197,7 +180,12 @@ connectionsConfig.ircConnections.forEach((conn) => {
       user: data.nick,
       userHost: data.hostname,
       text: data.message,
-      raw_event: data,
-    });
+      rawEvent: data,
+    };
+    nats.publish(
+      `chat.message.incoming.irc.${client.name}.${data.target}.${data.ident}`,
+      JSON.stringify(message)
+    );
+    log.info(`message received`, message);
   });
 });

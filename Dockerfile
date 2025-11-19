@@ -5,6 +5,8 @@ COPY --chown=node:node ./package-lock.json /eevee/package-lock.json
 
 WORKDIR /eevee
 
+ENV NODE_ENV=production
+
 RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
   set -exu \
   && echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" | tee -a $HOME/.npmrc \
@@ -13,7 +15,5 @@ RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
   && rm $HOME/.npmrc
 
 COPY --chown=node:node ./src/ /eevee/src
-
-ENV NODE_ENV=production
 
 CMD ["node", "src/main.mjs"]

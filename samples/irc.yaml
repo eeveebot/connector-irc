@@ -1,7 +1,8 @@
 ---
 
-ircConnections:
+connections:
 - name: localhost
+  enabled: true
   irc:
     host: localhost
     port: 6667
@@ -25,7 +26,6 @@ ircConnections:
 
   # Actions to take after connecting
   postConnect:
+  - action: join
     join:
-      - sequence: 1
-        channel: '#eevee'
-        key: ''
+    - channel: '#eevee'

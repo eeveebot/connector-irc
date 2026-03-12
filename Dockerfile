@@ -1,19 +1,50 @@
-FROM docker.io/node:24-alpine3.22
+FROM docker.io/node:24-alpine AS builder
 
-COPY --chown=node:node ./package.json /eevee/package.json
-COPY --chown=node:node ./package-lock.json /eevee/package-lock.json
+USER root
 
-WORKDIR /eevee
+RUN set -exu \
+  && apk add --no-cache \
+    bash \
+    make
 
-ENV NODE_ENV=production
+USER node
+
+WORKDIR /build
+
+COPY --chown=node:node . /build
+
+ENV NODE_ENV=development
 
 RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
   set -exu \
-  && echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" | tee -a $HOME/.npmrc \
-  && echo "@eeveebot:registry=https://npm.pkg.github.com/" | tee -a $HOME/.npmrc \
-  && npm install --include=prod \
-  && rm $HOME/.npmrc
+  && echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" | tee -a .npmrc
 
-COPY --chown=node:node ./src/ /eevee/src
+RUN set -exu \
+  && cd /build \
+  && npm install --include=dev \
+  && npm run build \
+  && rm -f .npmrc
 
-CMD ["node", "src/main.mjs"]
+FROM docker.io/node:24-alpine
+
+USER node
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --chown=node:node package.json package-lock.json .npmrc /app/
+
+RUN --mount=type=secret,id=GITHUB_TOKEN,env=GITHUB_TOKEN \
+  set -exu \
+  && echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" | tee -a .npmrc
+
+RUN set -exu \
+  && cd /app \
+  && npm install \
+  && rm -f .npmrc
+
+COPY --from=builder /build/dist /app/dist
+
+ENTRYPOINT ["/bin/sh"]
+
+CMD ["-c", " /app/dist/main.mjs"]

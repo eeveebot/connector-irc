@@ -1,20 +1,14 @@
 declare module '@eeveebot/libeevee' {
   import { EventEmitter } from 'events';
   import { Msg } from 'nats';
+  import { Logger } from 'winston';
+  import { Subscription } from 'nats';
+  import { Codec } from 'nats';
+  import { NatsConnection } from 'nats';
 
   export const eeveeLogo: string;
 
-  export interface LogMetadata {
-    producer: string;
-    [key: string]: unknown;
-  }
-
-  export const log: {
-    info(message: string, metadata?: LogMetadata): void;
-    error(message: string, metadata?: LogMetadata): void;
-    warn(message: string, metadata?: LogMetadata): void;
-    debug(message: string, metadata?: LogMetadata): void;
-  };
+  export const log: Logger;
 
   export interface NatsClientConfig {
     natsHost: string;
@@ -22,15 +16,24 @@ declare module '@eeveebot/libeevee' {
   }
 
   export class NatsClient extends EventEmitter {
+    name: string;
+    instanceUUID: string;
+    instanceIdent: string;
+    subjects: Subscription[];
+    natsHost: string | null;
+    natsToken: string | null;
+    sc: Codec<string>;
+    nats: NatsConnection | null;
+
     constructor(config: NatsClientConfig);
     connect(): Promise<void>;
     subscribe(
       subject: string,
-      callback: (subject: string, message: Msg) => void
-    ): Promise<string | false>;
-    publish(subject: string, message: string): Promise<boolean>;
+      callback?: (subject: string, message: Msg) => void
+    ): Promise<string | boolean>;
+    publish(subject: string, message: Uint8Array | string): Promise<boolean>;
     drain(): Promise<void>;
   }
 
-  export function handleSIG(signal: string): void;
+  export function handleSIG(signal: NodeJS.Signals): Promise<void>;
 }

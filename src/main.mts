@@ -15,7 +15,7 @@ import { NatsClient, handleSIG, log, eeveeLogo } from '@eeveebot/libeevee';
 const moduleUUID = 'a3e978d9-33af-4d5c-b750-8b3c82e9ee17';
 
 // This is mainly for cosmetics, used in quitmsg by default
-const connectorVersion = '0.4.20';
+const connectorVersion = '0.4.22';
 
 // This is of vital importance.
 
@@ -31,24 +31,24 @@ const natsSubscriptions: string[] = [];
 
 //
 // Do whatever teardown is necessary before calling common handler
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   ircClients.forEach((ircClient) => {
     ircClient.quit(`SIGINT received - ${ircClient.ident.quitMsg}`);
   });
   natsClients.forEach((natsClient) => {
     void natsClient.drain();
   });
-  handleSIG('SIGINT');
+  await handleSIG('SIGINT');
 });
 
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   ircClients.forEach((ircClient) => {
     ircClient.quit(`SIGTERM received - ${ircClient.ident.quitMsg}`);
   });
   natsClients.forEach((natsClient) => {
     void natsClient.drain();
   });
-  handleSIG('SIGTERM');
+  await handleSIG('SIGTERM');
 });
 
 //
@@ -81,7 +81,7 @@ void nats
     log.info(subject, { producer: 'natsClient', message: message.string() });
   })
   .then((sub) => {
-    if (sub) natsSubscriptions.push(sub);
+    if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
   });
 
 //
@@ -211,7 +211,7 @@ interface ConnectionConfig {
           }
         )
         .then((sub) => {
-          if (sub) natsSubscriptions.push(sub);
+          if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
         });
     });
 

@@ -15,7 +15,7 @@ import { NatsClient, handleSIG, log, eeveeLogo } from '@eeveebot/libeevee';
 const moduleUUID = 'a3e978d9-33af-4d5c-b750-8b3c82e9ee17';
 
 // This is mainly for cosmetics, used in quitmsg by default
-const connectorVersion = '0.4.22';
+const connectorVersion = '0.4.24';
 
 // This is of vital importance.
 
@@ -26,7 +26,7 @@ log.info(`eevee-irc-connector v${connectorVersion} starting up`, {
 });
 
 const ircClients: IrcClient[] = [];
-const natsClients: NatsClient[] = [];
+const natsClients: InstanceType<typeof NatsClient>[] = [];
 const natsSubscriptions: string[] = [];
 
 //

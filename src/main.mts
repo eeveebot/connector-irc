@@ -201,6 +201,52 @@ interface ConnectionConfig {
       // Do connected actions
     });
 
+    // Subscribe to control messages for this client
+    void nats
+      .subscribe(
+        `control.chatConnectors.irc.${client.name}`,
+        (subject, message) => {
+          try {
+            const controlMessage = JSON.parse(message.string());
+            log.info('Control message received', {
+              producer: 'ircClient',
+              subject: subject,
+              action: controlMessage.action,
+              data: controlMessage.data,
+            });
+
+            switch (controlMessage.action) {
+              case 'join':
+                if (controlMessage.data && controlMessage.data.channel) {
+                  client.join({
+                    name: controlMessage.data.channel,
+                    key: controlMessage.data.key || '',
+                  });
+                }
+                break;
+              case 'part':
+                if (controlMessage.data && controlMessage.data.channel) {
+                  client.part(controlMessage.data.channel);
+                }
+                break;
+              default:
+                log.warn('Unknown control action', {
+                  producer: 'ircClient',
+                  action: controlMessage.action,
+                });
+            }
+          } catch (error) {
+            log.error('Error processing control message', {
+              producer: 'ircClient',
+              error: error,
+            });
+          }
+        }
+      )
+      .then((sub) => {
+        if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+      });
+
     client.on('join', (data: IRC.JoinData) => {
       void nats
         .subscribe(

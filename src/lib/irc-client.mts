@@ -389,6 +389,30 @@ export class IrcClient extends EventEmitter {
     return obj;
   }
 
+  // part leaves a channel
+  part(channel: string) {
+    log.info(`parting channel ${channel}`, {
+      producer: 'ircClient',
+      instanceUUID: this.instanceUUID,
+    });
+    // Find the channel object and call part on it
+    const channelObj = this.channels.find(
+      (ch: IRC.Channel) => ch.name === channel
+    );
+    if (channelObj) {
+      channelObj.part();
+    }
+    // Remove the channel from our channels array
+    this.channels = this.channels.filter(
+      (ch: IRC.Channel) => ch.name !== channel
+    );
+    // Update status
+    this.updateStatus(
+      'channels',
+      this.status.channels.filter((ch: string) => ch !== channel)
+    );
+  }
+
   // connect() connects the IrcClient to the configured server
   connect() {
     log.info(`client connecting to ${this.connectionOptions.host}`, {

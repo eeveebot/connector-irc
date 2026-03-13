@@ -149,11 +149,16 @@ interface IrcConfig {
   username?: string;
 }
 
+interface IrcCommands {
+  commonPrefixRegex?: string;
+}
+
 interface ConnectionConfig {
   name: string;
   ident: IdentConfig;
   irc: IrcConfig;
   postConnect: PostConnectAction[];
+  commands?: IrcCommands;
 }
 
 // Stand up the connection for each config
@@ -229,6 +234,7 @@ interface ConnectionConfig {
         user: data.nick,
         userHost: data.hostname,
         text: data.message,
+        commonPrefixRegex: conn.commands?.commonPrefixRegex,
         rawEvent: data,
       };
       void nats.publish(

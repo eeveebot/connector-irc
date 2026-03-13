@@ -1,31 +1,75 @@
 ---
 
 connections:
-- name: localhost
-  enabled: true
-  irc:
-    host: localhost
-    port: 6667
-    ssl: true
-    autoReconnect: true
-    autoReconnectWait: 5000
-    autoReconnectMaxRetries: 10
-    autoRejoin: true
-    autoRejoinWait: 5000
-    autoRejoinMaxRetries: 5
-    pingInterval: 30
-    pingTimeout: 120
-
-  # Identifying information for the bot
-  ident:
-    nick: eevee-dev
-    username: eevee-dev
-    gecos: eevee.bot
-    version: "0.4.20"
-    quitMsg: "eevee 0.4.20"
-
-  # Actions to take after connecting
-  postConnect:
-  - action: join
-    join:
-    - channel: '#eevee'
+  # Display name for this network
+  - name: my-irc-network
+    # Enable this connection
+    enabled: true
+    # Define IRC connection parameters
+    irc:
+      # Host to connect to
+      host: irc.my-irc-network.local
+      # Port
+      port: 6667
+      # SSL
+      ssl: true
+      # Other params
+      autoReconnect: true
+      autoReconnectWait: 5000
+      autoReconnectMaxRetries: 10
+      autoRejoin: true
+      autoRejoinWait: 5000
+      autoRejoinMaxRetries: 5
+      pingInterval: 30
+      pingTimeout: 120
+    # IRC Ident info
+    ident:
+      # Nick to use on this network
+      nick: eevee
+      username: eevee
+      gecos: eevee.bot
+      # These default to the actual bot version if not defined
+      version: "0.4.20"
+      quitMsg: "eevee v0.4.20"
+    # Statically defined bot admins
+    # TODO: admins in database
+    rbac:
+      users:
+        its-you:
+          auth: ident
+          ident: your@ident.hostmask
+          groups:
+          - root
+    # Actions to take after connecting to the server
+    postConnect:
+    # Send a PM when we connect to the server
+    # You can have the text of the message stored as a secret
+    - action: msg
+      msg:
+        channel: 'nickserv' # irc-ism: no # means this is for a user (the nickserv bot in this case)
+        secretKeyRef:
+          secret:
+            name: my-irc-network-secrets
+          key: nickserv-ident-message # "identify MYTOKEN"
+    # Join some channels
+    - action: join
+      join:
+      # Open channel
+      - channel: '#bots'
+      # Channel that requires a key
+      - channel: '#cool-kids-club'
+        secretKeyRef:
+          secret:
+            name: my-irc-network-secrets
+          key: channel-key-cool-kids-club
+    # You can also specify msg content as a string here
+    - action: msg
+      msg:
+        channel: '#bots' # irc-ism: the # means this is for a channel
+        msg: hello world
+    # Send broadcast events for all received messages
+    broadcastMessages: true
+    # Settings related to command modules
+    commands:
+      # Common prefix regex to add to registered command regexes
+      commonPrefixRegex: "^-"

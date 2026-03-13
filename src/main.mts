@@ -205,14 +205,14 @@ interface ConnectionConfig {
       void nats
         .subscribe(
           `chat.message.outgoing.irc.${client.name}.${data.channel}`,
-          (subject, message) => {
-            const text = message.string();
+          (subject, msg) => {
+            const message = JSON.parse(msg.toString());
             log.info('Outgoing message', {
               producer: 'ircClient',
               subject: subject,
-              text: text,
+              text: message.text,
             });
-            client.say(data.channel, text);
+            client.say(data.channel, message.text);
           }
         )
         .then((sub) => {

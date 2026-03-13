@@ -87,11 +87,11 @@ void nats
 //
 // Setup IRC connections from config file
 
-// Get path to config file from env.CONNECTOR_IRC_CONFIG_FILE
-const connectionsConfigFilePath =
-  process.env.IRC_CONNECTIONS_CONFIG_FILE || false;
-if (!connectionsConfigFilePath) {
-  const msg = 'environment variable IRC_CONNECTIONS_CONFIG_FILE is not set.';
+// Get path to config file from env.MODULE_CONFIG_PATH
+const configFilePath =
+  process.env.MODULE_CONFIG_PATH || false;
+if (!configFilePath) {
+  const msg = 'environment variable MODULE_CONFIG_PATH is not set.';
   log.error(msg, { producer: 'ircClient' });
   throw new Error(msg);
 }
@@ -100,13 +100,13 @@ let connectionsConfig: unknown = null;
 
 // Read it in and parse it
 try {
-  const connectionsConfigFileContent = fs.readFileSync(
-    path.resolve(connectionsConfigFilePath as string),
+  const configFileContent = fs.readFileSync(
+    path.resolve(configFilePath as string),
     'utf8'
   );
-  connectionsConfig = yaml.load(connectionsConfigFileContent);
+  connectionsConfig = yaml.load(configFileContent);
 
-  log.info(`config loaded from ${connectionsConfigFilePath}`, {
+  log.info(`config loaded from ${configFilePath}`, {
     producer: 'ircClient',
   });
 } catch (error: unknown) {

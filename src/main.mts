@@ -88,8 +88,7 @@ void nats
 // Setup IRC connections from config file
 
 // Get path to config file from env.MODULE_CONFIG_PATH
-const configFilePath =
-  process.env.MODULE_CONFIG_PATH || false;
+const configFilePath = process.env.MODULE_CONFIG_PATH || false;
 if (!configFilePath) {
   const msg = 'environment variable MODULE_CONFIG_PATH is not set.';
   log.error(msg, { producer: 'ircClient' });
@@ -264,6 +263,24 @@ interface ConnectionConfig {
         .then((sub) => {
           if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
         });
+
+      // Handle outgoing notice messages
+      void nats
+        .subscribe(
+          `chat.notice.outgoing.irc.${client.name}.${data.channel}`,
+          (subject, ipcMessage) => {
+            const outgoingNotice = JSON.parse(ipcMessage.string());
+            log.info('Outgoing notice', {
+              producer: 'ircClient',
+              subject: subject,
+              text: outgoingNotice.text,
+            });
+            client.notice(data.channel, outgoingNotice.text);
+          }
+        )
+        .then((sub) => {
+          if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+        });
     });
 
     client.on('message', (data: IRC.MessageData) => {
@@ -289,5 +306,24 @@ interface ConnectionConfig {
       );
       log.info(`message received`, message);
     });
+
+    // Handle outgoing notice messages to users (private notices)
+    void nats
+      .subscribe(
+        `chat.notice.outgoing.irc.${client.name}`,
+        (subject, ipcMessage) => {
+          const outgoingNotice = JSON.parse(ipcMessage.string());
+          log.info('Outgoing private notice', {
+            producer: 'ircClient',
+            subject: subject,
+            target: outgoingNotice.target,
+            text: outgoingNotice.text,
+          });
+          client.notice(outgoingNotice.target, outgoingNotice.text);
+        }
+      )
+      .then((sub) => {
+        if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+      });
   }
 );

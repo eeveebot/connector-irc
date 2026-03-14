@@ -486,4 +486,8 @@ export class IrcClient extends EventEmitter {
   say(target: string, message: string) {
     this.irc.say(target, message);
   }
+
+  notice(target: string, message: string) {
+    this.irc.notice(target, message);
+  }
 }

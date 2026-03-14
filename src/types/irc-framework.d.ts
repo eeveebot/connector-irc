@@ -70,6 +70,7 @@ declare module 'irc-framework' {
     join(channel: string, key?: string): Channel;
     channel(channel: string, key?: string): Channel;
     say(target: string, message: string): void;
+    notice(target: string, message: string): void;
     quit(message?: string): void;
 
     // Event methods

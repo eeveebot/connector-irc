@@ -5,6 +5,14 @@ import * as IRC from 'irc-framework';
 
 import { log } from '@eeveebot/libeevee';
 
+// Extended interface for additional IRC events not covered by the base types
+interface ExtendedIrcEvents {
+  userlist: (event: { channel: string; users: Array<{ nick: string; ident: string; hostname: string; modes: string[] }> }) => void;
+}
+
+// Merge the extended events with the base IRC client events
+type ExtendedIrcClient = IRC.Client & EventEmitter & ExtendedIrcEvents;
+
 interface IrcClientConfig {
   name: string;
   ident: IdentConfig;
@@ -69,7 +77,7 @@ export class IrcClient extends EventEmitter {
 
   channels: IRC.Channel[] = [];
 
-  irc: IRC.Client;
+  irc: ExtendedIrcClient;
 
   constructor(config: IrcClientConfig) {
     super();
@@ -80,7 +88,7 @@ export class IrcClient extends EventEmitter {
     this.instanceIdent = `${process.env.HOSTNAME}-${config.name}`;
     this.instanceUUID = crypto.randomUUID();
     this.channels = [];
-    this.irc = new IRC.Client();
+    this.irc = new IRC.Client() as ExtendedIrcClient;
 
     this.irc.on('connected', (data: IRC.ConnectedData) => {
       log.info(

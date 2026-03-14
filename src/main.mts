@@ -187,6 +187,19 @@ interface ConnectionConfig {
   commands?: IrcCommands;
 }
 
+interface ControlMessageData {
+  channel?: string;
+  key?: string;
+  nick?: string;
+  reason?: string;
+  replyChannel?: string;
+}
+
+interface ControlMessage {
+  action: string;
+  data?: ControlMessageData;
+}
+
 // Function to reload configuration and recreate IRC clients
 async function reloadConfiguration() {
   log.info('Reloading configuration...', { producer: 'core' });
@@ -261,7 +274,7 @@ async function reloadConfiguration() {
           `control.chatConnectors.irc.${client.name}`,
           (subject, message) => {
             try {
-              const controlMessage = JSON.parse(message.string());
+              const controlMessage: ControlMessage = JSON.parse(message.string());
               log.info('Control message received', {
                 producer: 'ircClient',
                 subject: subject,
@@ -294,6 +307,52 @@ async function reloadConfiguration() {
                       controlMessage.data.nick,
                       controlMessage.data.reason
                     );
+                  }
+                  break;
+                case 'list-users-in-channel':
+                  if (controlMessage.data && controlMessage.data.channel) {
+                    // Send NAMES command to get user list
+                    client.irc.raw('NAMES', controlMessage.data.channel);
+                    
+                    // Set up one-time listener for userlist event
+                    const userlistHandler = (event: { channel: string; users: Array<{ nick: string; ident: string; hostname: string; modes: string[] }> }) => {
+                      if (event.channel.toLowerCase() === controlMessage.data!.channel!.toLowerCase()) {
+                        // Remove listener to prevent memory leaks
+                        client.irc.off('userlist', userlistHandler);
+                        
+                        // Send response back via replyChannel if provided
+                        if (controlMessage.data!.replyChannel) {
+                          const response = {
+                            channel: event.channel,
+                            users: event.users.map(user => ({
+                              nick: user.nick,
+                              ident: user.ident,
+                              hostname: user.hostname,
+                              modes: user.modes
+                            })),
+                            count: event.users.length
+                          };
+                          
+                          void nats.publish(controlMessage.data!.replyChannel, JSON.stringify(response));
+                        }
+                      }
+                    };
+                    
+                    // Attach the listener
+                    client.irc.on('userlist', userlistHandler);
+                    
+                    // Set a timeout to clean up the listener if no response
+                    setTimeout(() => {
+                      client.irc.off('userlist', userlistHandler);
+                      if (controlMessage.data!.replyChannel) {
+                        const response = {
+                          channel: controlMessage.data!.channel,
+                          error: 'Timeout waiting for user list',
+                          users: []
+                        };
+                        void nats.publish(controlMessage.data!.replyChannel, JSON.stringify(response));
+                      }
+                    }, 10000); // 10 second timeout
                   }
                   break;
                 default:

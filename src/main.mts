@@ -334,6 +334,7 @@ interface ConnectionConfig {
         user: data.nick,
         userHost: data.hostname,
         text: data.message,
+        botNick: client.status.currentNick,
         commonPrefixRegex: conn.commands?.commonPrefixRegex,
         rawEvent: data,
       };

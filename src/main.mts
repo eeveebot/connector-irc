@@ -11,6 +11,9 @@ import { IrcClient } from './lib/irc-client.mjs';
 import * as IRC from 'irc-framework';
 import { NatsClient, handleSIG, log, eeveeLogo } from '@eeveebot/libeevee';
 
+// Record module startup time for uptime tracking
+const moduleStartTime = Date.now();
+
 // Every module has a uuid
 const moduleUUID = 'a3e978d9-33af-4d5c-b750-8b3c82e9ee17';
 
@@ -79,6 +82,40 @@ await nats.connect();
 void nats
   .subscribe('control.connectors.irc.core.>', (subject, message) => {
     log.info(subject, { producer: 'natsClient', message: message.string() });
+  })
+  .then((sub) => {
+    if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+  });
+
+// Subscribe to stats.uptime messages and respond with module uptime
+void nats
+  .subscribe('stats.uptime', (subject, message) => {
+    try {
+      const data = JSON.parse(message.string());
+      log.info('Received stats.uptime request', {
+        producer: 'connector-irc',
+        replyChannel: data.replyChannel,
+      });
+
+      // Calculate uptime in milliseconds
+      const uptime = Date.now() - moduleStartTime;
+
+      // Send uptime back via the ephemeral reply channel
+      const uptimeResponse = {
+        module: 'connector-irc',
+        uptime: uptime,
+        uptimeFormatted: `${Math.floor(uptime / 86400000)}d ${Math.floor((uptime % 86400000) / 3600000)}h ${Math.floor((uptime % 3600000) / 60000)}m ${Math.floor((uptime % 60000) / 1000)}s`,
+      };
+
+      if (data.replyChannel) {
+        void nats.publish(data.replyChannel, JSON.stringify(uptimeResponse));
+      }
+    } catch (error) {
+      log.error('Failed to process stats.uptime request', {
+        producer: 'connector-irc',
+        error: error,
+      });
+    }
   })
   .then((sub) => {
     if (sub && typeof sub === 'string') natsSubscriptions.push(sub);

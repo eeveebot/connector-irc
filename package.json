@@ -16,6 +16,7 @@
     "update-libraries": "npm install --save @eeveebot/libeevee@latest"
   },
   "devDependencies": {
+    "@types/chokidar": "^1.7.5",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^18",
     "@types/ws": "^8.18.1",
@@ -28,6 +29,7 @@
   },
   "dependencies": {
     "@eeveebot/libeevee": "^1.2.11",
+    "chokidar": "^5.0.0",
     "irc-framework": "^4.14.0",
     "js-yaml": "^4.1.1",
     "nats": "^2.29.3",

@@ -5,6 +5,7 @@ import * as crypto from 'crypto';
 
 // 3rd party
 import * as yaml from 'js-yaml';
+import * as chokidar from 'chokidar';
 
 // 1st party
 import { IrcClient } from './lib/irc-client.mjs';
@@ -41,6 +42,10 @@ process.on('SIGINT', async () => {
   natsClients.forEach((natsClient) => {
     void natsClient.drain();
   });
+  // Close the config file watcher
+  if (configFileWatcher) {
+    await configFileWatcher.close();
+  }
   await handleSIG('SIGINT');
 });
 
@@ -51,6 +56,10 @@ process.on('SIGTERM', async () => {
   natsClients.forEach((natsClient) => {
     void natsClient.drain();
   });
+  // Close the config file watcher
+  if (configFileWatcher) {
+    await configFileWatcher.close();
+  }
   await handleSIG('SIGTERM');
 });
 
@@ -132,25 +141,6 @@ if (!configFilePath) {
   throw new Error(msg);
 }
 
-let connectionsConfig: unknown = null;
-
-// Read it in and parse it
-try {
-  const configFileContent = fs.readFileSync(
-    path.resolve(configFilePath as string),
-    'utf8'
-  );
-  connectionsConfig = yaml.load(configFileContent);
-
-  log.info(`config loaded from ${configFilePath}`, {
-    producer: 'ircClient',
-  });
-} catch (error: unknown) {
-  const msg = `error reading or parsing the config file: ${error}`;
-  log.error(msg, { producer: 'ircClient' });
-  throw new Error(msg);
-}
-
 interface IdentConfig {
   quitMsg: string;
   gecos?: string;
@@ -197,171 +187,229 @@ interface ConnectionConfig {
   commands?: IrcCommands;
 }
 
-// Stand up the connection for each config
-(connectionsConfig as { connections: ConnectionConfig[] }).connections.forEach(
-  (conn: ConnectionConfig) => {
-    log.info(`setting up irc connection for ${conn.name}`, {
+// Function to reload configuration and recreate IRC clients
+async function reloadConfiguration() {
+  log.info('Reloading configuration...', { producer: 'core' });
+
+  try {
+    // Disconnect all existing clients
+    ircClients.forEach((client) => {
+      client.quit('Configuration reload - reconnecting...');
+    });
+
+    // Clear the ircClients array
+    ircClients.length = 0;
+
+    // Clear NATS subscriptions
+    natsSubscriptions.length = 0;
+
+    // Re-read the configuration file
+    const configFileContent = fs.readFileSync(
+      path.resolve(configFilePath as string),
+      'utf8'
+    );
+    const newConnectionsConfig = yaml.load(configFileContent);
+
+    log.info(`config reloaded from ${configFilePath}`, {
       producer: 'ircClient',
     });
 
-    const client = new IrcClient({
-      name: conn.name,
-      ident: conn.ident,
-      connection: conn.irc,
-      postConnect: conn.postConnect,
-      connectionOptions: {
-        auto_reconnect_max_retries: conn.irc.autoReconnectMaxRetries || 10,
-        auto_reconnect_wait: conn.irc.autoReconnectWait || 5000,
-        auto_reconnect: conn.irc.autoReconnect || true,
-        auto_rejoin_max_retries: conn.irc.autoRejoinMaxRetries || 5,
-        auto_rejoin_wait: conn.irc.autoRejoinWait || 5000,
-        auto_rejoin: conn.irc.autoRejoin || true,
-        gecos: conn.ident.gecos || 'eevee.bot',
-        host: conn.irc.host || 'localhost',
-        nick: conn.ident.nick || 'eevee',
-        ping_interval: conn.irc.pingInterval || 30,
-        ping_timeout: conn.irc.pingTimeout || 120,
-        port: conn.irc.port || '6667',
-        ssl: conn.irc.ssl || false,
-        username: conn.ident.username || 'eevee',
-        version: conn.ident.version || connectorVersion,
-      },
-    });
-
-    ircClients.push(client);
-
-    client.connect();
-
-    // When we connect to a server, run any post-connect actions
-    client.on('connected', () => {
-      // Do connected actions
-    });
-
-    // Subscribe to control messages for this client
-    void nats
-      .subscribe(
-        `control.chatConnectors.irc.${client.name}`,
-        (subject, message) => {
-          try {
-            const controlMessage = JSON.parse(message.string());
-            log.info('Control message received', {
-              producer: 'ircClient',
-              subject: subject,
-              action: controlMessage.action,
-              data: controlMessage.data,
-            });
-
-            switch (controlMessage.action) {
-              case 'join':
-                if (controlMessage.data && controlMessage.data.channel) {
-                  client.join({
-                    name: controlMessage.data.channel,
-                    key: controlMessage.data.key || '',
-                  });
-                }
-                break;
-              case 'part':
-                if (controlMessage.data && controlMessage.data.channel) {
-                  client.part(controlMessage.data.channel);
-                }
-                break;
-              default:
-                log.warn('Unknown control action', {
-                  producer: 'ircClient',
-                  action: controlMessage.action,
-                });
-            }
-          } catch (error) {
-            log.error('Error processing control message', {
-              producer: 'ircClient',
-              error: error,
-            });
-          }
-        }
-      )
-      .then((sub) => {
-        if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+    // Create new clients based on the reloaded configuration
+    (
+      newConnectionsConfig as { connections: ConnectionConfig[] }
+    ).connections.forEach((conn: ConnectionConfig) => {
+      log.info(`setting up irc connection for ${conn.name}`, {
+        producer: 'ircClient',
       });
 
-    client.on('join', (data: IRC.JoinData) => {
+      const client = new IrcClient({
+        name: conn.name,
+        ident: conn.ident,
+        connection: conn.irc,
+        postConnect: conn.postConnect,
+        connectionOptions: {
+          auto_reconnect_max_retries: conn.irc.autoReconnectMaxRetries || 10,
+          auto_reconnect_wait: conn.irc.autoReconnectWait || 5000,
+          auto_reconnect: conn.irc.autoReconnect || true,
+          auto_rejoin_max_retries: conn.irc.autoRejoinMaxRetries || 5,
+          auto_rejoin_wait: conn.irc.autoRejoinWait || 5000,
+          auto_rejoin: conn.irc.autoRejoin || true,
+          gecos: conn.ident.gecos || 'eevee.bot',
+          host: conn.irc.host || 'localhost',
+          nick: conn.ident.nick || 'eevee',
+          ping_interval: conn.irc.pingInterval || 30,
+          ping_timeout: conn.irc.pingTimeout || 120,
+          port: conn.irc.port || '6667',
+          ssl: conn.irc.ssl || false,
+          username: conn.ident.username || 'eevee',
+          version: conn.ident.version || connectorVersion,
+        },
+      });
+
+      ircClients.push(client);
+
+      client.connect();
+
+      // When we connect to a server, run any post-connect actions
+      client.on('connected', () => {
+        // Do connected actions
+      });
+
+      // Subscribe to control messages for this client
       void nats
         .subscribe(
-          `chat.message.outgoing.irc.${client.name}.${data.channel}`,
-          (subject, ipcMessage) => {
-            const outgoingMessage = JSON.parse(ipcMessage.string());
-            log.info('Outgoing message', {
-              producer: 'ircClient',
-              subject: subject,
-              text: outgoingMessage.text,
-            });
-            client.say(data.channel, outgoingMessage.text);
+          `control.chatConnectors.irc.${client.name}`,
+          (subject, message) => {
+            try {
+              const controlMessage = JSON.parse(message.string());
+              log.info('Control message received', {
+                producer: 'ircClient',
+                subject: subject,
+                action: controlMessage.action,
+                data: controlMessage.data,
+              });
+
+              switch (controlMessage.action) {
+                case 'join':
+                  if (controlMessage.data && controlMessage.data.channel) {
+                    client.join({
+                      name: controlMessage.data.channel,
+                      key: controlMessage.data.key || '',
+                    });
+                  }
+                  break;
+                case 'part':
+                  if (controlMessage.data && controlMessage.data.channel) {
+                    client.part(controlMessage.data.channel);
+                  }
+                  break;
+                default:
+                  log.warn('Unknown control action', {
+                    producer: 'ircClient',
+                    action: controlMessage.action,
+                  });
+              }
+            } catch (error) {
+              log.error('Error processing control message', {
+                producer: 'ircClient',
+                error: error,
+              });
+            }
           }
         )
         .then((sub) => {
           if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
         });
 
-      // Handle outgoing notice messages
+      client.on('join', (data: IRC.JoinData) => {
+        void nats
+          .subscribe(
+            `chat.message.outgoing.irc.${client.name}.${data.channel}`,
+            (subject, ipcMessage) => {
+              const outgoingMessage = JSON.parse(ipcMessage.string());
+              log.info('Outgoing message', {
+                producer: 'ircClient',
+                subject: subject,
+                text: outgoingMessage.text,
+              });
+              client.say(data.channel, outgoingMessage.text);
+            }
+          )
+          .then((sub) => {
+            if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+          });
+
+        // Handle outgoing notice messages
+        void nats
+          .subscribe(
+            `chat.notice.outgoing.irc.${client.name}.${data.channel}`,
+            (subject, ipcMessage) => {
+              const outgoingNotice = JSON.parse(ipcMessage.string());
+              log.info('Outgoing notice', {
+                producer: 'ircClient',
+                subject: subject,
+                text: outgoingNotice.text,
+              });
+              client.notice(data.channel, outgoingNotice.text);
+            }
+          )
+          .then((sub) => {
+            if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+          });
+      });
+
+      client.on('message', (data: IRC.MessageData) => {
+        const message = {
+          producer: 'ircClient',
+          subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}@${data.hostname}`,
+          moduleUUID: moduleUUID,
+          type: 'chat.message.incoming',
+          trace: crypto.randomUUID(),
+          platform: 'irc',
+          instance: client.name,
+          network: client.status.remoteHost,
+          channel: data.target,
+          user: data.nick,
+          userHost: data.hostname,
+          text: data.message,
+          botNick: client.status.currentNick,
+          commonPrefixRegex: conn.commands?.commonPrefixRegex,
+          rawEvent: data,
+        };
+        void nats.publish(
+          `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}`,
+          JSON.stringify(message)
+        );
+        log.info(`message received`, message);
+      });
+
+      // Handle outgoing notice messages to users (private notices)
       void nats
         .subscribe(
-          `chat.notice.outgoing.irc.${client.name}.${data.channel}`,
+          `chat.notice.outgoing.irc.${client.name}`,
           (subject, ipcMessage) => {
             const outgoingNotice = JSON.parse(ipcMessage.string());
-            log.info('Outgoing notice', {
+            log.info('Outgoing private notice', {
               producer: 'ircClient',
               subject: subject,
+              target: outgoingNotice.target,
               text: outgoingNotice.text,
             });
-            client.notice(data.channel, outgoingNotice.text);
+            client.notice(outgoingNotice.target, outgoingNotice.text);
           }
         )
         .then((sub) => {
           if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
         });
     });
-
-    client.on('message', (data: IRC.MessageData) => {
-      const message = {
-        producer: 'ircClient',
-        subject: `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}@${data.hostname}`,
-        moduleUUID: moduleUUID,
-        type: 'chat.message.incoming',
-        trace: crypto.randomUUID(),
-        platform: 'irc',
-        instance: client.name,
-        network: client.status.remoteHost,
-        channel: data.target,
-        user: data.nick,
-        userHost: data.hostname,
-        text: data.message,
-        botNick: client.status.currentNick,
-        commonPrefixRegex: conn.commands?.commonPrefixRegex,
-        rawEvent: data,
-      };
-      void nats.publish(
-        `chat.message.incoming.irc.${client.name}.${data.target}.${data.nick}`,
-        JSON.stringify(message)
-      );
-      log.info(`message received`, message);
+  } catch (error) {
+    log.error('Error reloading configuration', {
+      producer: 'core',
+      error: error,
     });
-
-    // Handle outgoing notice messages to users (private notices)
-    void nats
-      .subscribe(
-        `chat.notice.outgoing.irc.${client.name}`,
-        (subject, ipcMessage) => {
-          const outgoingNotice = JSON.parse(ipcMessage.string());
-          log.info('Outgoing private notice', {
-            producer: 'ircClient',
-            subject: subject,
-            target: outgoingNotice.target,
-            text: outgoingNotice.text,
-          });
-          client.notice(outgoingNotice.target, outgoingNotice.text);
-        }
-      )
-      .then((sub) => {
-        if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
-      });
   }
-);
+}
+
+// Watch the config file for changes and reload when it changes
+const configFileWatcher = chokidar.watch(configFilePath as string, {
+  persistent: true,
+  ignoreInitial: false, // Trigger on initial add for initial setup
+  awaitWriteFinish: {
+    stabilityThreshold: 2000,
+    pollInterval: 100,
+  },
+});
+
+configFileWatcher.on('add', async (path: string) => {
+  log.info(`Config file added: ${path}`, { producer: 'core' });
+  await reloadConfiguration();
+});
+
+configFileWatcher.on('change', async (path: string) => {
+  log.info(`Config file changed: ${path}`, { producer: 'core' });
+  await reloadConfiguration();
+});
+
+log.info(`Watching config file for changes: ${configFilePath}`, {
+  producer: 'core',
+});

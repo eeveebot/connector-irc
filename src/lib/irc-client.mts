@@ -490,4 +490,12 @@ export class IrcClient extends EventEmitter {
   notice(target: string, message: string) {
     this.irc.notice(target, message);
   }
+
+  kick(channel: string, nick: string, reason?: string) {
+    if (reason) {
+      this.irc.raw('KICK', channel, nick, reason);
+    } else {
+      this.irc.raw('KICK', channel, nick);
+    }
+  }
 }

@@ -72,6 +72,8 @@ declare module 'irc-framework' {
     say(target: string, message: string): void;
     notice(target: string, message: string): void;
     quit(message?: string): void;
+    raw(...args: unknown[]): void;
+    rawString(...args: unknown[]): string;
 
     // Event methods
     on(event: 'registered', listener: (data: unknown) => void): this;

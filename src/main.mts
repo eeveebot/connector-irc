@@ -283,6 +283,19 @@ async function reloadConfiguration() {
                     client.part(controlMessage.data.channel);
                   }
                   break;
+                case 'kick':
+                  if (
+                    controlMessage.data &&
+                    controlMessage.data.channel &&
+                    controlMessage.data.nick
+                  ) {
+                    client.kick(
+                      controlMessage.data.channel,
+                      controlMessage.data.nick,
+                      controlMessage.data.reason
+                    );
+                  }
+                  break;
                 default:
                   log.warn('Unknown control action', {
                     producer: 'ircClient',

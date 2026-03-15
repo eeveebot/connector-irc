@@ -274,7 +274,9 @@ async function reloadConfiguration() {
           `control.chatConnectors.irc.${client.name}`,
           (subject, message) => {
             try {
-              const controlMessage: ControlMessage = JSON.parse(message.string());
+              const controlMessage: ControlMessage = JSON.parse(
+                message.string()
+              );
               log.info('Control message received', {
                 producer: 'ircClient',
                 subject: subject,
@@ -313,34 +315,48 @@ async function reloadConfiguration() {
                   if (controlMessage.data && controlMessage.data.channel) {
                     // Send NAMES command to get user list
                     client.irc.raw('NAMES', controlMessage.data.channel);
-                    
+
                     // Set up one-time listener for userlist event
-                    const userlistHandler = (event: { channel: string; users: Array<{ nick: string; ident: string; hostname: string; modes: string[] }> }) => {
-                      if (event.channel.toLowerCase() === controlMessage.data!.channel!.toLowerCase()) {
+                    const userlistHandler = (event: {
+                      channel: string;
+                      users: Array<{
+                        nick: string;
+                        ident: string;
+                        hostname: string;
+                        modes: string[];
+                      }>;
+                    }) => {
+                      if (
+                        event.channel.toLowerCase() ===
+                        controlMessage.data!.channel!.toLowerCase()
+                      ) {
                         // Remove listener to prevent memory leaks
                         client.irc.off('userlist', userlistHandler);
-                        
+
                         // Send response back via replyChannel if provided
                         if (controlMessage.data!.replyChannel) {
                           const response = {
                             channel: event.channel,
-                            users: event.users.map(user => ({
+                            users: event.users.map((user) => ({
                               nick: user.nick,
                               ident: user.ident,
                               hostname: user.hostname,
-                              modes: user.modes
+                              modes: user.modes,
                             })),
-                            count: event.users.length
+                            count: event.users.length,
                           };
-                          
-                          void nats.publish(controlMessage.data!.replyChannel, JSON.stringify(response));
+
+                          void nats.publish(
+                            controlMessage.data!.replyChannel,
+                            JSON.stringify(response)
+                          );
                         }
                       }
                     };
-                    
+
                     // Attach the listener
                     client.irc.on('userlist', userlistHandler);
-                    
+
                     // Set a timeout to clean up the listener if no response
                     setTimeout(() => {
                       client.irc.off('userlist', userlistHandler);
@@ -348,9 +364,12 @@ async function reloadConfiguration() {
                         const response = {
                           channel: controlMessage.data!.channel,
                           error: 'Timeout waiting for user list',
-                          users: []
+                          users: [],
                         };
-                        void nats.publish(controlMessage.data!.replyChannel, JSON.stringify(response));
+                        void nats.publish(
+                          controlMessage.data!.replyChannel,
+                          JSON.stringify(response)
+                        );
                       }
                     }, 10000); // 10 second timeout
                   }
@@ -373,42 +392,47 @@ async function reloadConfiguration() {
           if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
         });
 
-      client.on('join', (data: IRC.JoinData) => {
-        void nats
-          .subscribe(
-            `chat.message.outgoing.irc.${client.name}.${data.channel}`,
-            (subject, ipcMessage) => {
-              const outgoingMessage = JSON.parse(ipcMessage.string());
-              log.info('Outgoing message', {
-                producer: 'ircClient',
-                subject: subject,
-                text: outgoingMessage.text,
-              });
-              client.say(data.channel, outgoingMessage.text);
-            }
-          )
-          .then((sub) => {
-            if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
-          });
+      // Subscribe to outgoing messages for this client
+      void nats
+        .subscribe(
+          `chat.message.outgoing.irc.${client.name}.>`,
+          (subject, ipcMessage) => {
+            const outgoingMessage = JSON.parse(ipcMessage.string());
+            // Extract channel from subject (format: chat.message.outgoing.irc.$clientname.$channel)
+            const channel = subject.split('.').pop() || '#eevee';
+            log.info('Outgoing message', {
+              producer: 'ircClient',
+              subject: subject,
+              channel: channel,
+              text: outgoingMessage.text,
+            });
+            client.say(channel, outgoingMessage.text);
+          }
+        )
+        .then((sub) => {
+          if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+        });
 
-        // Handle outgoing notice messages
-        void nats
-          .subscribe(
-            `chat.notice.outgoing.irc.${client.name}.${data.channel}`,
-            (subject, ipcMessage) => {
-              const outgoingNotice = JSON.parse(ipcMessage.string());
-              log.info('Outgoing notice', {
-                producer: 'ircClient',
-                subject: subject,
-                text: outgoingNotice.text,
-              });
-              client.notice(data.channel, outgoingNotice.text);
-            }
-          )
-          .then((sub) => {
-            if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
-          });
-      });
+      // Handle outgoing notice messages for this client
+      void nats
+        .subscribe(
+          `chat.notice.outgoing.irc.${client.name}.>`,
+          (subject, ipcMessage) => {
+            const outgoingNotice = JSON.parse(ipcMessage.string());
+            // Extract channel from subject (format: chat.notice.outgoing.irc.$clientname.$channel)
+            const channel = subject.split('.').pop() || '#eevee';
+            log.info('Outgoing notice', {
+              producer: 'ircClient',
+              subject: subject,
+              channel: channel,
+              text: outgoingNotice.text,
+            });
+            client.notice(channel, outgoingNotice.text);
+          }
+        )
+        .then((sub) => {
+          if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
+        });
 
       client.on('message', (data: IRC.MessageData) => {
         const message = {

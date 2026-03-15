@@ -7,7 +7,15 @@ import { log } from '@eeveebot/libeevee';
 
 // Extended interface for additional IRC events not covered by the base types
 interface ExtendedIrcEvents {
-  userlist: (event: { channel: string; users: Array<{ nick: string; ident: string; hostname: string; modes: string[] }> }) => void;
+  userlist: (event: {
+    channel: string;
+    users: Array<{
+      nick: string;
+      ident: string;
+      hostname: string;
+      modes: string[];
+    }>;
+  }) => void;
 }
 
 // Merge the extended events with the base IRC client events

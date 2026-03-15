@@ -503,8 +503,6 @@ async function reloadConfiguration() {
             // Record outgoing message
             messageCounter.inc({
               module: 'connector-irc',
-              network: client.connectionOptions.host,
-              channel: channel,
               direction: 'outgoing',
               result: 'sent',
             });
@@ -535,8 +533,6 @@ async function reloadConfiguration() {
             // Record outgoing notice
             messageCounter.inc({
               module: 'connector-irc',
-              network: client.connectionOptions.host,
-              channel: channel,
               direction: 'outgoing',
               result: 'sent',
             });
@@ -594,8 +590,6 @@ async function reloadConfiguration() {
             // Record outgoing private notice
             messageCounter.inc({
               module: 'connector-irc',
-              network: client.connectionOptions.host,
-              channel: outgoingNotice.target,
               direction: 'outgoing',
               result: 'sent',
             });

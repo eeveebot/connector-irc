@@ -5,6 +5,16 @@ import * as IRC from 'irc-framework';
 
 import { log } from '@eeveebot/libeevee';
 
+// Metrics
+import {
+  connectionCounter,
+  connectionGauge,
+  channelCounter,
+  channelGauge,
+  errorCounter,
+  messageCounter,
+} from './metrics/index.mjs';
+
 // Extended interface for additional IRC events not covered by the base types
 interface ExtendedIrcEvents {
   userlist: (event: {
@@ -110,6 +120,14 @@ export class IrcClient extends EventEmitter {
       this.updateStatus('ircConnected', true);
       this.updateStatus('remoteHost', this.connectionOptions.host);
       this.updateStatus('currentNick', data.nick);
+      
+      // Record successful connection
+      connectionCounter.inc({
+        network: this.connectionOptions.host,
+        result: 'success',
+      });
+      connectionGauge.inc({ network: this.connectionOptions.host });
+      
       if (this.postConnect) {
         setTimeout(() => {
           this.postConnect.forEach((action) => {
@@ -135,6 +153,17 @@ export class IrcClient extends EventEmitter {
         rawEvent: data,
       });
       this.updateStatus('channels', this.status.channels.concat(data.channel));
+      
+      // Record channel join
+      channelCounter.inc({
+        network: this.connectionOptions.host,
+        channel: data.channel,
+        action: 'join',
+      });
+      channelGauge.inc({
+        network: this.connectionOptions.host,
+        channel: data.channel,
+      });
     });
 
     // Passthrough all events
@@ -152,10 +181,23 @@ export class IrcClient extends EventEmitter {
 
     this.irc.on('close', (...args: unknown[]) => {
       this.emit('close', ...args);
+      
+      // Record disconnection
+      connectionCounter.inc({
+        network: this.connectionOptions.host,
+        result: 'disconnected',
+      });
+      connectionGauge.dec({ network: this.connectionOptions.host });
     });
 
     this.irc.on('socket close', (...args: unknown[]) => {
       this.emit('socket close', ...args);
+      
+      // Record connection error
+      errorCounter.inc({
+        type: 'connection',
+        operation: 'socket_close',
+      });
     });
 
     this.irc.on('socket connected', (...args: unknown[]) => {
@@ -233,6 +275,23 @@ export class IrcClient extends EventEmitter {
 
     this.irc.on('part', (...args: unknown[]) => {
       this.emit('part', ...args);
+      
+      // Try to extract channel information from the event
+      if (Array.isArray(args) && args.length > 0) {
+        const data = args[0] as { channel?: string };
+        if (data.channel) {
+          // Record channel part
+          channelCounter.inc({
+            network: this.connectionOptions.host,
+            channel: data.channel,
+            action: 'part',
+          });
+          channelGauge.dec({
+            network: this.connectionOptions.host,
+            channel: data.channel,
+          });
+        }
+      }
     });
 
     this.irc.on('kick', (...args: unknown[]) => {
@@ -262,6 +321,17 @@ export class IrcClient extends EventEmitter {
 
     this.irc.on('message', (...args: unknown[]) => {
       this.emit('message', ...args);
+      
+      // Record incoming message
+      if (Array.isArray(args) && args.length > 0) {
+        const data = args[0] as { target?: string };
+        messageCounter.inc({
+          network: this.connectionOptions.host,
+          channel: data.target || 'unknown',
+          direction: 'incoming',
+          result: 'processed',
+        });
+      }
     });
 
     this.irc.on('tagmsg', (...args: unknown[]) => {

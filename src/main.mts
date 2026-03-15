@@ -398,8 +398,8 @@ async function reloadConfiguration() {
           `chat.message.outgoing.irc.${client.name}.>`,
           (subject, ipcMessage) => {
             const outgoingMessage = JSON.parse(ipcMessage.string());
-            // Extract channel from subject (format: chat.message.outgoing.irc.$clientname.$channel)
-            const channel = subject.split('.').pop() || '#eevee';
+            // Extract channel from message payload
+            const channel = outgoingMessage.channel || '#eevee';
             log.info('Outgoing message', {
               producer: 'ircClient',
               subject: subject,
@@ -419,8 +419,8 @@ async function reloadConfiguration() {
           `chat.notice.outgoing.irc.${client.name}.>`,
           (subject, ipcMessage) => {
             const outgoingNotice = JSON.parse(ipcMessage.string());
-            // Extract channel from subject (format: chat.notice.outgoing.irc.$clientname.$channel)
-            const channel = subject.split('.').pop() || '#eevee';
+            // Extract channel from message payload
+            const channel = outgoingNotice.channel || '#eevee';
             log.info('Outgoing notice', {
               producer: 'ircClient',
               subject: subject,

@@ -123,10 +123,11 @@ export class IrcClient extends EventEmitter {
       
       // Record successful connection
       connectionCounter.inc({
+        module: 'connector-irc',
         network: this.connectionOptions.host,
         result: 'success',
       });
-      connectionGauge.inc({ network: this.connectionOptions.host });
+      connectionGauge.inc({ module: 'connector-irc', network: this.connectionOptions.host });
       
       if (this.postConnect) {
         setTimeout(() => {
@@ -156,11 +157,13 @@ export class IrcClient extends EventEmitter {
       
       // Record channel join
       channelCounter.inc({
+        module: 'connector-irc',
         network: this.connectionOptions.host,
         channel: data.channel,
         action: 'join',
       });
       channelGauge.inc({
+        module: 'connector-irc',
         network: this.connectionOptions.host,
         channel: data.channel,
       });
@@ -184,10 +187,11 @@ export class IrcClient extends EventEmitter {
       
       // Record disconnection
       connectionCounter.inc({
+        module: 'connector-irc',
         network: this.connectionOptions.host,
         result: 'disconnected',
       });
-      connectionGauge.dec({ network: this.connectionOptions.host });
+      connectionGauge.dec({ module: 'connector-irc', network: this.connectionOptions.host });
     });
 
     this.irc.on('socket close', (...args: unknown[]) => {
@@ -195,6 +199,7 @@ export class IrcClient extends EventEmitter {
       
       // Record connection error
       errorCounter.inc({
+        module: 'connector-irc',
         type: 'connection',
         operation: 'socket_close',
       });
@@ -282,11 +287,13 @@ export class IrcClient extends EventEmitter {
         if (data.channel) {
           // Record channel part
           channelCounter.inc({
+            module: 'connector-irc',
             network: this.connectionOptions.host,
             channel: data.channel,
             action: 'part',
           });
           channelGauge.dec({
+            module: 'connector-irc',
             network: this.connectionOptions.host,
             channel: data.channel,
           });
@@ -326,6 +333,7 @@ export class IrcClient extends EventEmitter {
       if (Array.isArray(args) && args.length > 0) {
         const data = args[0] as { target?: string };
         messageCounter.inc({
+          module: 'connector-irc',
           network: this.connectionOptions.host,
           channel: data.target || 'unknown',
           direction: 'incoming',

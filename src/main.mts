@@ -105,7 +105,7 @@ await nats.connect();
       .then((sub) => {
         if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
         // Record subscription
-        natsSubscribeCounter.inc({ subject: 'control.connectors.irc.core.>' });
+        natsSubscribeCounter.inc({ module: 'connector-irc', subject: 'control.connectors.irc.core.>' });
       });
 
 // Subscribe to stats.uptime messages and respond with module uptime
@@ -130,7 +130,7 @@ void nats
 
       if (data.replyChannel) {
         void nats.publish(data.replyChannel, JSON.stringify(uptimeResponse));
-        natsPublishCounter.inc({ type: 'uptime_response' });
+        natsPublishCounter.inc({ module: 'connector-irc', type: 'uptime_response' });
       }
     } catch (error) {
       log.error('Failed to process stats.uptime request', {
@@ -145,7 +145,7 @@ void nats
   .then((sub) => {
     if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
     // Record subscription
-    natsSubscribeCounter.inc({ subject: 'stats.uptime' });
+    natsSubscribeCounter.inc({ module: 'connector-irc', subject: 'stats.uptime' });
   });
 
 // Subscribe to stats.emit.request messages and respond with full module stats
@@ -180,7 +180,7 @@ void nats
 
         if (data.replyChannel) {
           void nats.publish(data.replyChannel, JSON.stringify(statsResponse));
-          natsPublishCounter.inc({ type: 'stats_response' });
+          natsPublishCounter.inc({ module: 'connector-irc', type: 'stats_response' });
         }
       }).catch((error) => {
         log.error('Failed to collect prometheus metrics', {
@@ -198,7 +198,7 @@ void nats
   .then((sub) => {
     if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
     // Record subscription
-    natsSubscribeCounter.inc({ subject: 'stats.emit.request' });
+    natsSubscribeCounter.inc({ module: 'connector-irc', subject: 'stats.emit.request' });
   });
 
 //
@@ -421,7 +421,7 @@ async function reloadConfiguration() {
                             controlMessage.data!.replyChannel,
                             JSON.stringify(response)
                           );
-                          natsPublishCounter.inc({ type: 'user_list_response' });
+                          natsPublishCounter.inc({ module: 'connector-irc', type: 'user_list_response' });
                         }
                       }
                     };
@@ -442,7 +442,7 @@ async function reloadConfiguration() {
                           controlMessage.data!.replyChannel,
                           JSON.stringify(response)
                         );
-                        natsPublishCounter.inc({ type: 'user_list_timeout' });
+                        natsPublishCounter.inc({ module: 'connector-irc', type: 'user_list_timeout' });
                       }
                     }, 10000); // 10 second timeout
                   }
@@ -455,6 +455,7 @@ async function reloadConfiguration() {
                   
                   // Record unknown action
                   errorCounter.inc({
+                    module: 'connector-irc',
                     type: 'control',
                     operation: 'unknown_action',
                   });
@@ -467,6 +468,7 @@ async function reloadConfiguration() {
               
               // Record error
               errorCounter.inc({
+                module: 'connector-irc',
                 type: 'control',
                 operation: 'processing_error',
               });
@@ -476,7 +478,7 @@ async function reloadConfiguration() {
         .then((sub) => {
           if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
           // Record subscription
-          natsSubscribeCounter.inc({ subject: `control.chatConnectors.irc.${client.name}` });
+          natsSubscribeCounter.inc({ module: 'connector-irc', subject: `control.chatConnectors.irc.${client.name}` });
         });
 
       // Subscribe to outgoing messages for this client
@@ -497,6 +499,7 @@ async function reloadConfiguration() {
             
             // Record outgoing message
             messageCounter.inc({
+              module: 'connector-irc',
               network: client.connectionOptions.host,
               channel: channel,
               direction: 'outgoing',
@@ -507,7 +510,7 @@ async function reloadConfiguration() {
         .then((sub) => {
           if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
           // Record subscription
-          natsSubscribeCounter.inc({ subject: `chat.message.outgoing.irc.${client.name}.>` });
+          natsSubscribeCounter.inc({ module: 'connector-irc', subject: `chat.message.outgoing.irc.${client.name}.>` });
         });
 
       // Handle outgoing notice messages for this client
@@ -528,6 +531,7 @@ async function reloadConfiguration() {
             
             // Record outgoing notice
             messageCounter.inc({
+              module: 'connector-irc',
               network: client.connectionOptions.host,
               channel: channel,
               direction: 'outgoing',
@@ -538,7 +542,7 @@ async function reloadConfiguration() {
         .then((sub) => {
           if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
           // Record subscription
-          natsSubscribeCounter.inc({ subject: `chat.notice.outgoing.irc.${client.name}.>` });
+          natsSubscribeCounter.inc({ module: 'connector-irc', subject: `chat.notice.outgoing.irc.${client.name}.>` });
         });
 
       client.on('message', (data: IRC.MessageData) => {
@@ -565,7 +569,7 @@ async function reloadConfiguration() {
         );
         
         // Record NATS publish
-        natsPublishCounter.inc({ type: 'message' });
+        natsPublishCounter.inc({ module: 'connector-irc', type: 'message' });
         
         log.info(`message received`, message);
       });
@@ -586,6 +590,7 @@ async function reloadConfiguration() {
             
             // Record outgoing private notice
             messageCounter.inc({
+              module: 'connector-irc',
               network: client.connectionOptions.host,
               channel: outgoingNotice.target,
               direction: 'outgoing',
@@ -596,7 +601,7 @@ async function reloadConfiguration() {
         .then((sub) => {
           if (sub && typeof sub === 'string') natsSubscriptions.push(sub);
           // Record subscription
-          natsSubscribeCounter.inc({ subject: `chat.notice.outgoing.irc.${client.name}` });
+          natsSubscribeCounter.inc({ module: 'connector-irc', subject: `chat.notice.outgoing.irc.${client.name}` });
         });
     });
   } catch (error) {

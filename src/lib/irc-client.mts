@@ -11,9 +11,9 @@ import {
   connectionGauge,
   channelCounter,
   channelGauge,
-  errorCounter,
   messageCounter,
 } from './metrics/index.mjs';
+import { errorCounter } from '@eeveebot/libeevee';
 
 // Extended interface for additional IRC events not covered by the base types
 interface ExtendedIrcEvents {

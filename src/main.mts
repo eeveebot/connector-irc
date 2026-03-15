@@ -13,17 +13,20 @@ import * as IRC from 'irc-framework';
 import { NatsClient, handleSIG, log, eeveeLogo } from '@eeveebot/libeevee';
 
 // Metrics
-import { initializeSystemMetrics, natsPublishCounter, natsSubscribeCounter, errorCounter, messageCounter, register } from './lib/metrics/index.mjs';
-import { setupHttpServer } from './lib/http-server.mjs';
+import { initializeSystemMetrics, setupHttpServer, natsPublishCounter, natsSubscribeCounter, errorCounter } from '@eeveebot/libeevee';
+import { messageCounter, register } from './lib/metrics/index.mjs';
 
 // Record module startup time for uptime tracking
 const moduleStartTime = Date.now();
 
-// Initialize metrics
-initializeSystemMetrics();
+// Initialize system metrics
+initializeSystemMetrics('connector-irc');
 
 // Setup HTTP API server for metrics
-setupHttpServer();
+setupHttpServer({
+  port: process.env.HTTP_API_PORT || '9000',
+  serviceName: 'connector-irc'
+});
 
 // Every module has a uuid
 const moduleUUID = 'a3e978d9-33af-4d5c-b750-8b3c82e9ee17';

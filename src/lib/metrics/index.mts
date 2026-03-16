@@ -1,5 +1,5 @@
 import { register } from 'prom-client';
-import { 
+import {
   messageCounter,
   messageProcessingTime,
   connectionCounter,
@@ -9,11 +9,11 @@ import {
   natsPublishCounter,
   natsSubscribeCounter,
   errorCounter,
-  initializeSystemMetrics
+  initializeSystemMetrics,
 } from '@eeveebot/libeevee';
 
 // Export common metrics from libeevee
-export { 
+export {
   messageCounter,
   messageProcessingTime,
   connectionCounter,
@@ -23,7 +23,7 @@ export {
   natsPublishCounter,
   natsSubscribeCounter,
   errorCounter,
-  initializeSystemMetrics
+  initializeSystemMetrics,
 };
 
 // Export register for metrics collection

@@ -28,8 +28,16 @@ interface ExtendedIrcEvents {
   }) => void;
 }
 
-// Merge the extended events with the base IRC client events
-type ExtendedIrcClient = IRC.Client & EventEmitter & ExtendedIrcEvents;
+// Extended interface for additional IRC client methods not covered by the base types
+interface ExtendedIrcMethods {
+  action: (target: string, message: string) => void;
+}
+
+// Merge the extended events with the base IRC client events and methods
+type ExtendedIrcClient = IRC.Client &
+  EventEmitter &
+  ExtendedIrcEvents &
+  ExtendedIrcMethods;
 
 interface IrcClientConfig {
   name: string;
@@ -120,14 +128,14 @@ export class IrcClient extends EventEmitter {
       this.updateStatus('ircConnected', true);
       this.updateStatus('remoteHost', this.connectionOptions.host);
       this.updateStatus('currentNick', data.nick);
-      
+
       // Record successful connection
       connectionCounter.inc({
         module: 'connector-irc',
         result: 'success',
       });
       connectionGauge.inc({ module: 'connector-irc' });
-      
+
       if (this.postConnect) {
         setTimeout(() => {
           this.postConnect.forEach((action) => {
@@ -153,7 +161,7 @@ export class IrcClient extends EventEmitter {
         rawEvent: data,
       });
       this.updateStatus('channels', this.status.channels.concat(data.channel));
-      
+
       // Record channel join
       channelCounter.inc({
         module: 'connector-irc',
@@ -180,7 +188,7 @@ export class IrcClient extends EventEmitter {
 
     this.irc.on('close', (...args: unknown[]) => {
       this.emit('close', ...args);
-      
+
       // Record disconnection
       connectionCounter.inc({
         module: 'connector-irc',
@@ -191,7 +199,7 @@ export class IrcClient extends EventEmitter {
 
     this.irc.on('socket close', (...args: unknown[]) => {
       this.emit('socket close', ...args);
-      
+
       // Record connection error
       errorCounter.inc({
         module: 'connector-irc',
@@ -275,7 +283,7 @@ export class IrcClient extends EventEmitter {
 
     this.irc.on('part', (...args: unknown[]) => {
       this.emit('part', ...args);
-      
+
       // Try to extract channel information from the event
       if (Array.isArray(args) && args.length > 0) {
         const data = args[0] as { channel?: string };
@@ -320,7 +328,7 @@ export class IrcClient extends EventEmitter {
 
     this.irc.on('message', (...args: unknown[]) => {
       this.emit('message', ...args);
-      
+
       // Record incoming message
       if (Array.isArray(args) && args.length > 0) {
         messageCounter.inc({
@@ -580,5 +588,9 @@ export class IrcClient extends EventEmitter {
     } else {
       this.irc.raw('KICK', channel, nick);
     }
+  }
+
+  action(target: string, message: string) {
+    this.irc.action(target, message);
   }
 }

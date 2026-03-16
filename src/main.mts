@@ -363,6 +363,113 @@ async function reloadConfiguration() {
         // Do connected actions
       });
 
+      // Handle incoming IRC messages and publish to NATS
+      client.on('privmsg', (event) => {
+        try {
+          const message = {
+            producer: 'ircClient',
+            subject: `chat.message.incoming.irc.${client.name}.${event.target}.${event.nick}`,
+            type: 'chat.message.incoming',
+            platform: 'irc',
+            instance: client.name,
+            network: client.connectionOptions.host,
+            channel: event.target,
+            user: event.nick,
+            userHost: event.ident,
+            text: event.message,
+            time: event.time,
+            account: event.account,
+            rawEvent: event,
+          };
+
+          // Publish to NATS with proper subject format
+          void nats.publish(
+            `chat.message.incoming.irc.${client.name}.${event.target}.${event.nick}`,
+            JSON.stringify(message)
+          );
+
+          // Record incoming message
+          messageCounter.inc({
+            module: 'connector-irc',
+            direction: 'incoming',
+            result: 'published',
+          });
+
+          log.info('Incoming message published to NATS', {
+            producer: 'ircClient',
+            channel: event.target,
+            user: event.nick,
+            message: event.message,
+          });
+        } catch (error) {
+          log.error('Error processing incoming IRC message', {
+            producer: 'ircClient',
+            error: error,
+          });
+
+          // Record error
+          errorCounter.inc({
+            module: 'connector-irc',
+            type: 'message',
+            operation: 'processing_error',
+          });
+        }
+      });
+
+      // Handle incoming IRC actions (/me commands) and publish to NATS
+      client.on('action', (event) => {
+        try {
+          const message = {
+            producer: 'ircClient',
+            subject: `chat.message.incoming.irc.${client.name}.${event.target}.${event.nick}`,
+            type: 'chat.message.incoming',
+            platform: 'irc',
+            instance: client.name,
+            network: client.connectionOptions.host,
+            channel: event.target,
+            user: event.nick,
+            userHost: event.ident ? `${event.nick}!${event.ident}@${event.hostname}` : `${event.nick}@${event.hostname}`,
+            text: event.message,
+            time: event.time,
+            account: event.account,
+            action: true, // Flag to indicate this is an action message
+            rawEvent: event,
+          };
+
+          // Publish to NATS with proper subject format
+          void nats.publish(
+            `chat.message.incoming.irc.${client.name}.${event.target}.${event.nick}`,
+            JSON.stringify(message)
+          );
+
+          // Record incoming action
+          messageCounter.inc({
+            module: 'connector-irc',
+            direction: 'incoming',
+            result: 'published',
+          });
+
+          log.info('Incoming action published to NATS', {
+            producer: 'ircClient',
+            channel: event.target,
+            user: event.nick,
+            message: event.message,
+          });
+        } catch (error) {
+          log.error('Error processing incoming IRC action', {
+            producer: 'ircClient',
+            error: error,
+          });
+
+          // Record error
+          errorCounter.inc({
+            module: 'connector-irc',
+            type: 'message',
+            operation: 'processing_error',
+          });
+        }
+      });
+
       // Subscribe to control messages for this client
       void nats
         .subscribe(

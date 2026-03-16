@@ -380,6 +380,7 @@ async function reloadConfiguration() {
             text: event.message,
             time: event.time,
             account: event.account,
+            botNick: client.status.currentNick || client.connectionOptions.nick,
             commonPrefixRegex: client.commands?.commonPrefixRegex,
             rawEvent: event,
           };
@@ -430,11 +431,14 @@ async function reloadConfiguration() {
             network: client.connectionOptions.host,
             channel: event.target,
             user: event.nick,
-            userHost: event.ident ? `${event.nick}!${event.ident}@${event.hostname}` : `${event.nick}@${event.hostname}`,
+            userHost: event.ident
+              ? `${event.nick}!${event.ident}@${event.hostname}`
+              : `${event.nick}@${event.hostname}`,
             text: event.message,
             time: event.time,
             account: event.account,
             action: true, // Flag to indicate this is an action message
+            botNick: client.status.currentNick || client.connectionOptions.nick,
             commonPrefixRegex: client.commands?.commonPrefixRegex,
             rawEvent: event,
           };

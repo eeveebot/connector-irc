@@ -352,6 +352,7 @@ async function reloadConfiguration() {
           username: conn.ident.username || 'eevee',
           version: conn.ident.version || connectorVersion,
         },
+        commands: conn.commands,
       });
 
       ircClients.push(client);
@@ -379,6 +380,7 @@ async function reloadConfiguration() {
             text: event.message,
             time: event.time,
             account: event.account,
+            commonPrefixRegex: client.commands?.commonPrefixRegex,
             rawEvent: event,
           };
 
@@ -433,6 +435,7 @@ async function reloadConfiguration() {
             time: event.time,
             account: event.account,
             action: true, // Flag to indicate this is an action message
+            commonPrefixRegex: client.commands?.commonPrefixRegex,
             rawEvent: event,
           };
 

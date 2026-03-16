@@ -39,12 +39,17 @@ type ExtendedIrcClient = IRC.Client &
   ExtendedIrcEvents &
   ExtendedIrcMethods;
 
+interface IrcCommands {
+  commonPrefixRegex?: string;
+}
+
 interface IrcClientConfig {
   name: string;
   ident: IdentConfig;
   connection: unknown;
   postConnect: PostConnectAction[];
   connectionOptions: ConnectionOptions;
+  commands?: IrcCommands;
 }
 
 interface ConnectionOptions {
@@ -93,6 +98,7 @@ export class IrcClient extends EventEmitter {
   instanceIdent: string = '';
   ident: IdentConfig;
   postConnect: PostConnectAction[];
+  commands?: IrcCommands;
 
   status: Status = {
     remoteHost: '',
@@ -110,6 +116,7 @@ export class IrcClient extends EventEmitter {
     this.name = config.name;
     this.ident = config.ident;
     this.postConnect = config.postConnect;
+    this.commands = config.commands;
     this.connectionOptions = config.connectionOptions;
     this.instanceIdent = `${process.env.HOSTNAME}-${config.name}`;
     this.instanceUUID = crypto.randomUUID();

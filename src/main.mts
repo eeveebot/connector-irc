@@ -431,10 +431,9 @@ async function reloadConfiguration() {
             instance: client.name,
             network: client.connectionOptions.host,
             channel: event.target,
-            user: event.nick,
-            userHost: event.ident
-              ? `${event.nick}!${event.ident}@${event.hostname}`
-              : `${event.nick}@${event.hostname}`,
+            nick: event.nick,
+            userHost: event.hostname,
+            user: event.ident,
             text: event.message,
             time: event.time,
             account: event.account,

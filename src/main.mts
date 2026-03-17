@@ -526,6 +526,9 @@ async function reloadConfiguration() {
                     // Send NAMES command to get user list
                     client.irc.raw('NAMES', controlMessage.data.channel);
 
+                    // Track if we've already sent a response
+                    let responseSent = false;
+
                     // Set up one-time listener for userlist event
                     const userlistHandler = (event: {
                       channel: string;
@@ -542,6 +545,12 @@ async function reloadConfiguration() {
                       ) {
                         // Remove listener to prevent memory leaks
                         client.irc.off('userlist', userlistHandler);
+
+                        // Check if we've already sent a response
+                        if (responseSent) return;
+
+                        // Mark response as sent
+                        responseSent = true;
 
                         // Send response back via replyChannel if provided
                         if (controlMessage.data!.replyChannel) {
@@ -573,7 +582,15 @@ async function reloadConfiguration() {
 
                     // Set a timeout to clean up the listener if no response
                     setTimeout(() => {
+                      // Check if we've already sent a response
+                      if (responseSent) return;
+
+                      // Remove listener to prevent memory leaks
                       client.irc.off('userlist', userlistHandler);
+
+                      // Mark response as sent
+                      responseSent = true;
+
                       if (controlMessage.data!.replyChannel) {
                         const response = {
                           channel: controlMessage.data!.channel,

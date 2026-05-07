@@ -560,6 +560,7 @@ async function reloadConfiguration() {
                               ident: user.ident,
                               hostname: user.hostname,
                               modes: user.modes,
+                              isChannelAdmin: user.modes.some((m: string) => ['h', 'o', 'a', 'q'].includes(m)),
                             })),
                             count: event.users.length,
                           };
@@ -638,6 +639,7 @@ async function reloadConfiguration() {
                           channel: targetChannel,
                           nick: targetUser.nick,
                           modes: targetUser.channel_modes || [],
+                          isChannelAdmin: (targetUser.channel_modes || []).some((m: string) => ['h', 'o', 'a', 'q'].includes(m)),
                         };
                         void nats.publish(replyChannel, JSON.stringify(response));
                         natsPublishCounter.inc({
@@ -650,6 +652,7 @@ async function reloadConfiguration() {
                           channel: targetChannel,
                           nick: targetNick,
                           modes: [],
+                          isChannelAdmin: false,
                           warning: 'User not found in channel',
                         };
                         void nats.publish(replyChannel, JSON.stringify(response));
@@ -670,6 +673,7 @@ async function reloadConfiguration() {
                           channel: targetChannel,
                           nick: targetNick,
                           modes: [],
+                          isChannelAdmin: false,
                           error: 'Timeout waiting for user modes',
                         };
                         void nats.publish(replyChannel, JSON.stringify(response));

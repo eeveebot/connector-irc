@@ -1,6 +1,6 @@
 {
   "name": "@eeveebot/connector-irc",
-  "version": "1.5.9",
+  "version": "1.5.10",
   "description": "the eevee irc connector",
   "keywords": [
     "eevee"
@@ -29,7 +29,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@eeveebot/libeevee": "^4.0.3",
+    "@eeveebot/libeevee": "^4.0.5",
     "chokidar": "^5.0.0",
     "express": "^5.2.1",
     "irc-framework": "^4.14.0",

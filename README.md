@@ -184,11 +184,13 @@ The user list response is published to the `replyChannel`:
 {
   "channel": "#channel",
   "users": [
-    { "nick": "alice", "ident": "alice", "hostname": "user/host", "modes": ["o"] }
+    { "nick": "alice", "ident": "alice", "hostname": "user/host", "modes": ["o"], "isChannelAdmin": true }
   ],
   "count": 1
 }
 ```
+
+Each user object includes an `isChannelAdmin` boolean — `true` if the user has channel mode `+h` (halfop), `+o` (op), `+a` (admin/protect), or `+q` (owner).
 
 If the NAMES response times out (10 seconds), an error response is sent:
 ```json
@@ -198,6 +200,48 @@ If the NAMES response times out (10 seconds), an error response is sent:
   "users": []
 }
 ```
+
+**Get modes for a user:**
+```json
+{
+  "action": "get-modes-for-user",
+  "data": { "channel": "#channel", "nick": "someuser", "replyChannel": "ephemeral.reply.subject" }
+}
+```
+
+The modes response is published to the `replyChannel`:
+```json
+{
+  "channel": "#channel",
+  "nick": "someuser",
+  "modes": ["o", "v"],
+  "isChannelAdmin": true
+}
+```
+
+If the user is not found in the channel:
+```json
+{
+  "channel": "#channel",
+  "nick": "someuser",
+  "modes": [],
+  "isChannelAdmin": false,
+  "warning": "User not found in channel"
+}
+```
+
+If the WHO query times out (5 seconds):
+```json
+{
+  "channel": "#channel",
+  "nick": "someuser",
+  "modes": [],
+  "isChannelAdmin": false,
+  "error": "Timeout waiting for user modes"
+}
+```
+
+This action sends a WHO query to the IRC server every time (no caching) to ensure fresh, authoritative mode data.
 
 ### Stats Subjects
 

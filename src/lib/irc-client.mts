@@ -31,6 +31,7 @@ interface ExtendedIrcEvents {
 // Extended interface for additional IRC client methods not covered by the base types
 interface ExtendedIrcMethods {
   action: (target: string, message: string) => void;
+  who: (target: string, callback: (response: { users: Array<{ nick: string; channel_modes?: string[] }> }) => void) => void;
 }
 
 // Merge the extended events with the base IRC client events and methods

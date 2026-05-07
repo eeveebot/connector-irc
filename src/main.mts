@@ -608,6 +608,79 @@ async function reloadConfiguration() {
                     }, 10000); // 10 second timeout
                   }
                   break;
+                case 'get-modes-for-user':
+                  if (
+                    controlMessage.data &&
+                    controlMessage.data.channel &&
+                    controlMessage.data.nick
+                  ) {
+                    const targetChannel = controlMessage.data.channel;
+                    const targetNick = controlMessage.data.nick;
+                    const replyChannel = controlMessage.data.replyChannel;
+
+                    // Track if we've already sent a response
+                    let modesResponseSent = false;
+
+                    // Send WHO query to the server (irc-framework handles WHOX detection)
+                    client.irc.who(targetChannel, (whoResponse: { users: Array<{ nick: string; channel_modes?: string[] }> }) => {
+                      if (modesResponseSent) return;
+                      modesResponseSent = true;
+
+                      if (!replyChannel) return;
+
+                      // Find the target user in the WHO response
+                      const targetUser = whoResponse.users.find(
+                        (user) => user.nick === targetNick
+                      );
+
+                      if (targetUser) {
+                        const response = {
+                          channel: targetChannel,
+                          nick: targetUser.nick,
+                          modes: targetUser.channel_modes || [],
+                        };
+                        void nats.publish(replyChannel, JSON.stringify(response));
+                        natsPublishCounter.inc({
+                          module: 'connector-irc',
+                          type: 'user_modes_response',
+                        });
+                      } else {
+                        // User not found in the WHO response
+                        const response = {
+                          channel: targetChannel,
+                          nick: targetNick,
+                          modes: [],
+                          warning: 'User not found in channel',
+                        };
+                        void nats.publish(replyChannel, JSON.stringify(response));
+                        natsPublishCounter.inc({
+                          module: 'connector-irc',
+                          type: 'user_modes_not_found',
+                        });
+                      }
+                    });
+
+                    // Set a timeout to send an error if no WHO response
+                    setTimeout(() => {
+                      if (modesResponseSent) return;
+                      modesResponseSent = true;
+
+                      if (replyChannel) {
+                        const response = {
+                          channel: targetChannel,
+                          nick: targetNick,
+                          modes: [],
+                          error: 'Timeout waiting for user modes',
+                        };
+                        void nats.publish(replyChannel, JSON.stringify(response));
+                        natsPublishCounter.inc({
+                          module: 'connector-irc',
+                          type: 'user_modes_timeout',
+                        });
+                      }
+                    }, 5000); // 5 second timeout
+                  }
+                  break;
                 default:
                   log.warn('Unknown control action', {
                     producer: 'ircClient',

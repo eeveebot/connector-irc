@@ -26,11 +26,7 @@ const moduleStartTime = Date.now();
 // Initialize system metrics
 initializeSystemMetrics('connector-irc');
 
-// Setup HTTP API server for metrics
-setupHttpServer({
-  port: process.env.HTTP_API_PORT || '9000',
-  serviceName: 'connector-irc',
-});
+// Setup HTTP API server for metrics (moved after natsClients declaration)
 
 // This is mainly for cosmetics, used in quitmsg by default
 const connectorVersion = '0.4.24';
@@ -46,6 +42,13 @@ log.info(`eevee-irc-connector v${connectorVersion} starting up`, {
 const ircClients: IrcClient[] = [];
 const natsClients: InstanceType<typeof NatsClient>[] = [];
 const natsSubscriptions: string[] = [];
+
+// Setup HTTP API server for metrics and health checks
+setupHttpServer({
+  port: process.env.HTTP_API_PORT || '9000',
+  serviceName: 'connector-irc',
+  natsClients: natsClients,
+});
 
 //
 // Do whatever teardown is necessary before calling common handler

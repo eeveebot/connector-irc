@@ -114,10 +114,10 @@ await nats.connect();
  */
 function setupNatsSubscriptions(natsClient: InstanceType<typeof NatsClient>): void {
   void natsClient
-    .subscribe('control.connectors.irc.core.>', (subject, message) => {
+    .subscribe('control.connectors.irc.core.>', (subject: string, message: Nats.Msg) => {
       log.info(subject, { producer: 'natsClient', message: message.string() });
     })
-    .then((sub) => {
+    .then((sub: Nats.Subscription | false) => {
       if (sub !== false) natsSubscriptions.push(sub);
       // Record subscription
       natsSubscribeCounter.inc({
@@ -128,7 +128,7 @@ function setupNatsSubscriptions(natsClient: InstanceType<typeof NatsClient>): vo
 
   // Subscribe to stats.uptime messages and respond with module uptime
   void natsClient
-    .subscribe('stats.uptime', (subject, message) => {
+    .subscribe('stats.uptime', (subject: string, message: Nats.Msg) => {
       try {
         const data = JSON.parse(message.string());
         log.info('Received stats.uptime request', {
@@ -160,7 +160,7 @@ function setupNatsSubscriptions(natsClient: InstanceType<typeof NatsClient>): vo
         });
       }
     })
-    .then((sub) => {
+    .then((sub: Nats.Subscription | false) => {
       if (sub !== false) natsSubscriptions.push(sub);
       // Record subscription
       natsSubscribeCounter.inc({
@@ -171,7 +171,7 @@ function setupNatsSubscriptions(natsClient: InstanceType<typeof NatsClient>): vo
 
   // Subscribe to stats.emit.request messages and respond with full module stats
   void natsClient
-    .subscribe('stats.emit.request', (subject, message) => {
+    .subscribe('stats.emit.request', (subject: string, message: Nats.Msg) => {
       try {
         const data = JSON.parse(message.string());
         log.info('Received stats.emit.request', {
@@ -224,7 +224,7 @@ function setupNatsSubscriptions(natsClient: InstanceType<typeof NatsClient>): vo
         });
       }
     })
-    .then((sub) => {
+    .then((sub: Nats.Subscription | false) => {
       if (sub !== false) natsSubscriptions.push(sub);
       // Record subscription
       natsSubscribeCounter.inc({
@@ -744,7 +744,7 @@ async function reloadConfiguration() {
             }
           }
         )
-        .then((sub) => {
+        .then((sub: Nats.Subscription | false) => {
           if (sub !== false) natsSubscriptions.push(sub);
           // Record subscription
           natsSubscribeCounter.inc({
@@ -784,7 +784,7 @@ async function reloadConfiguration() {
             }
           }
         )
-        .then((sub) => {
+        .then((sub: Nats.Subscription | false) => {
           if (sub !== false) natsSubscriptions.push(sub);
           // Record subscription
           natsSubscribeCounter.inc({
@@ -824,7 +824,7 @@ async function reloadConfiguration() {
             }
           }
         )
-        .then((sub) => {
+        .then((sub: Nats.Subscription | false) => {
           if (sub !== false) natsSubscriptions.push(sub);
           // Record subscription
           natsSubscribeCounter.inc({
@@ -864,7 +864,7 @@ async function reloadConfiguration() {
             }
           }
         )
-        .then((sub) => {
+        .then((sub: Nats.Subscription | false) => {
           if (sub !== false) natsSubscriptions.push(sub);
           // Record subscription
           natsSubscribeCounter.inc({
@@ -902,7 +902,7 @@ async function reloadConfiguration() {
             }
           }
         )
-        .then((sub) => {
+        .then((sub: Nats.Subscription | false) => {
           if (sub !== false) natsSubscriptions.push(sub);
           // Record subscription
           natsSubscribeCounter.inc({

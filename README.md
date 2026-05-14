@@ -325,7 +325,7 @@ The `action` field is `true` for `/me` messages, omitted or `false` for regular 
 
 **Config hot-reload:**
 
-`chokidar` watches the config file. On `add` (initial load) or `change`, all existing IRC clients quit, the config file is re-read, and new clients are created and connected.
+`chokidar` watches the config file. On `add` (initial load) or `change`, the NATS client is drained (with a 3-second per-client timeout), all existing IRC clients quit, the config file is re-read, and new clients are created and connected. The NATS client is then recreated so subscriptions are fresh. This ensures no stale subscriptions or messages are lost during the transition.
 
 ## Development
 

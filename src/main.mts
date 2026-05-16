@@ -23,7 +23,7 @@ import { messageCounter, register } from './lib/metrics/index.mjs';
 
 // Record module startup time for uptime tracking
 const moduleStartTime = Date.now();
-const moduleVersion = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version as string;
+const moduleVersion = JSON.parse(fs.readFileSync(new URL('package.json', 'file://' + process.cwd() + '/'), 'utf8')).version as string;
 
 // Initialize system metrics
 initializeSystemMetrics('connector-irc');
@@ -32,7 +32,7 @@ initializeSystemMetrics('connector-irc');
 
 // This is mainly for cosmetics, used in quitmsg by default
 const { version: connectorVersion } = JSON.parse(
-  fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+  fs.readFileSync(new URL('package.json', 'file://' + process.cwd() + '/'), 'utf8')
 );
 
 // This is of vital importance.

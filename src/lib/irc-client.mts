@@ -136,6 +136,7 @@ export class IrcClient extends EventEmitter {
       this.updateStatus('ircConnected', true);
       this.updateStatus('remoteHost', this.connectionOptions.host);
       this.updateStatus('currentNick', data.nick);
+      this.updateStatus('lastConnectAt', new Date().toISOString());
 
       // Record successful connection
       connectionCounter.inc({
@@ -191,10 +192,14 @@ export class IrcClient extends EventEmitter {
     });
 
     this.irc.on('reconnecting', (...args: unknown[]) => {
+      const count = (this.status.reconnectCount as number || 0) + 1;
+      this.updateStatus('reconnectCount', count);
       this.emit('reconnecting', ...args);
     });
 
     this.irc.on('close', (...args: unknown[]) => {
+      this.updateStatus('ircConnected', false);
+      this.updateStatus('lastDisconnectAt', new Date().toISOString());
       this.emit('close', ...args);
 
       // Record disconnection
@@ -206,6 +211,8 @@ export class IrcClient extends EventEmitter {
     });
 
     this.irc.on('socket close', (...args: unknown[]) => {
+      this.updateStatus('ircConnected', false);
+      this.updateStatus('lastDisconnectAt', new Date().toISOString());
       this.emit('socket close', ...args);
 
       // Record connection error

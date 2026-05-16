@@ -23,6 +23,7 @@ import { messageCounter, register } from './lib/metrics/index.mjs';
 
 // Record module startup time for uptime tracking
 const moduleStartTime = Date.now();
+const moduleVersion = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version as string;
 
 // Initialize system metrics
 initializeSystemMetrics('connector-irc');
@@ -142,6 +143,7 @@ function setupNatsSubscriptions(natsClient: InstanceType<typeof NatsClient>): vo
         // Send uptime back via the ephemeral reply channel
         const uptimeResponse = {
           module: 'connector-irc',
+          version: moduleVersion,
           uptime: uptime,
           uptimeFormatted: `${Math.floor(uptime / 86400000)}d ${Math.floor((uptime % 86400000) / 3600000)}h ${Math.floor((uptime % 3600000) / 60000)}m ${Math.floor((uptime % 60000) / 1000)}s`,
         };
@@ -193,6 +195,7 @@ function setupNatsSubscriptions(natsClient: InstanceType<typeof NatsClient>): vo
             const statsResponse = {
               module: 'connector-irc',
               stats: {
+                version: moduleVersion,
                 uptime_seconds: Math.floor(uptime / 1000),
                 uptime_formatted: `${Math.floor(uptime / 86400000)}d ${Math.floor((uptime % 86400000) / 3600000)}h ${Math.floor((uptime % 3600000) / 60000)}m ${Math.floor((uptime % 60000) / 1000)}s`,
                 memory_rss_mb: Math.round(memoryUsage.rss / (1024 * 1024)),
@@ -200,6 +203,16 @@ function setupNatsSubscriptions(natsClient: InstanceType<typeof NatsClient>): vo
                   memoryUsage.heapUsed / (1024 * 1024)
                 ),
                 prometheus_metrics: prometheusMetrics,
+                connector: ircClients.map((c) => ({
+                  name: c.name,
+                  connected: c.status.ircConnected === true,
+                  host: (c.status.remoteHost as string) || '—',
+                  nick: (c.status.currentNick as string) || '—',
+                  channels: Array.isArray(c.status.channels) ? c.status.channels.length : 0,
+                  reconnects: (c.status.reconnectCount as number) || 0,
+                  lastConnect: (c.status.lastConnectAt as string) || null,
+                  lastDisconnect: (c.status.lastDisconnectAt as string) || null,
+                })),
               },
             };
 
